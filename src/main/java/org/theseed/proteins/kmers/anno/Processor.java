@@ -1,7 +1,7 @@
 /**
  *
  */
-package org.theseed.kmers.anno;
+package org.theseed.proteins.kmers.anno;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;

@@ -1,4 +1,4 @@
-package org.theseed.kmers.anno;
+package org.theseed.proteins.kmers.anno;
 
 
 /**
