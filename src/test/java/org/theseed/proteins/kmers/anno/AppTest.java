@@ -10,6 +10,7 @@ import static org.hamcrest.Matchers.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 
 import org.apache.commons.lang3.StringUtils;
 import org.theseed.counters.CountMap;
@@ -17,6 +18,7 @@ import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
 import org.theseed.locations.Location;
 import org.theseed.locations.PegProposal;
+import org.theseed.locations.PegProposalList;
 import org.theseed.proteins.CodonSet;
 import org.theseed.proteins.DnaTranslator;
 import org.theseed.proteins.kmers.KmerReference;
@@ -26,6 +28,8 @@ import org.theseed.proteins.kmers.KmerReference;
  */
 public class AppTest extends TestCase
 {
+    private static final String TEST_CONTIG = "51203.13.con.0001";
+
     /**
      * Create the test case
      *
@@ -139,11 +143,11 @@ public class AppTest extends TestCase
     public void testPegProposals() throws IOException {
         CodonSet starts = new CodonSet("ttg", "ctg", "atg");
         Genome testGto = new Genome(new File("src/test", "test.gto"));
-        PegProposal prop1 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1249, 1302), "hypothetical protein", 86);
+        PegProposal prop1 = PegProposal.create(testGto, Location.create(TEST_CONTIG, "+", 1249, 1302), "hypothetical protein", 86);
         assertThat(prop1.getFunction(), equalTo("hypothetical protein"));
         assertThat(prop1.getStrength(), closeTo(0.4155, 0.0001));
         Location loc = prop1.getLoc();
-        assertThat(loc.getContigId(), equalTo("51203.13.con.0001"));
+        assertThat(loc.getContigId(), equalTo(TEST_CONTIG));
         assertThat(loc.getDir(), equalTo('+'));
         // Verify we found the correct endpoint.
         assertThat(loc.getEnd(), equalTo(1422));
@@ -151,14 +155,14 @@ public class AppTest extends TestCase
         // Verify that we contain the region.
         assertThat(loc.getLeft(), lessThanOrEqualTo(1294));
         // Verify that we extended to a start.
-        String dna = testGto.getContig("51203.13.con.0001").getSequence();
+        String dna = testGto.getContig(TEST_CONTIG).getSequence();
         assertTrue(starts.contains(dna, loc.getBegin()));
         // Test comparison and equality.
-        PegProposal prop2 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1261, 1320), "serious protein", 86);
+        PegProposal prop2 = PegProposal.create(testGto, Location.create(TEST_CONTIG, "+", 1261, 1320), "serious protein", 86);
         assertThat(prop2.getFunction(), equalTo("serious protein"));
         assertThat(prop2.getStrength(), closeTo(0.5029, 0.0001));
         loc = prop2.getLoc();
-        assertThat(loc.getContigId(), equalTo("51203.13.con.0001"));
+        assertThat(loc.getContigId(), equalTo(TEST_CONTIG));
         assertThat(loc.getDir(), equalTo('+'));
         // Verify we found the correct endpoints.
         assertThat(loc.getEnd(), equalTo(1422));
@@ -180,8 +184,57 @@ public class AppTest extends TestCase
         assertThat(prop1.getFunction(), equalTo("serious protein"));
         assertThat(prop1.getStrength(), closeTo(0.5029, 0.0001));
         // Test a bad proposal.
-        prop1 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1261, 1463), "invalid protein", 0);
+        prop1 = PegProposal.create(testGto, Location.create(TEST_CONTIG, "+", 1261, 1463), "invalid protein", 0);
         assertNull(prop1);
+    }
+
+    /**
+     * test proposal lists
+     * @throws IOException
+     */
+    public void testProposalLists() throws IOException {
+        Genome testGto = new Genome(new File("src/test", "test.gto"));
+        PegProposalList proposals = new PegProposalList(testGto, 0.50);
+        // First test-- too weak
+        proposals.propose(Location.create(TEST_CONTIG, "+", 1249, 1302), "long function", 69);
+        assertThat(proposals.getWeakCount(), equalTo(1));
+        assertThat(proposals.getProposalCount(), equalTo(0));
+        assertThat(proposals.getMadeCount(), equalTo(1));
+        // More evidence, will be stored
+        proposals.propose(Location.create(TEST_CONTIG, "+", 1249, 1302), "long function", 138);
+        assertThat(proposals.getProposalCount(), equalTo(1));
+        assertThat(proposals.getMadeCount(), equalTo(2));
+        // Shorter with same strength, will not be stored.
+        proposals.propose(Location.create(TEST_CONTIG, "+", 1261, 1320), "short function", 114);
+        assertThat(proposals.getProposalCount(), equalTo(1));
+        assertThat(proposals.getMergeCount(), equalTo(0));
+        assertThat(proposals.getMadeCount(), equalTo(3));
+        // Shorter with more strength, gets merged.
+        proposals.propose(Location.create(TEST_CONTIG, "+", 1261, 1320), "short function", 133);
+        assertThat(proposals.getProposalCount(), equalTo(1));
+        assertThat(proposals.getMergeCount(), equalTo(1));
+        assertThat(proposals.getMadeCount(), equalTo(4));
+        // Add some more for variety.
+        proposals.propose(Location.create(TEST_CONTIG, "+", 825851, 825853), "far protein", 163);
+        proposals.propose(Location.create(TEST_CONTIG, "-", 777932, 779122), "minus protein", 600);
+        proposals.propose(Location.create(TEST_CONTIG, "-", 914899, 916002), "minus 1104", 800);
+        // One to reject.
+        proposals.propose(Location.create(TEST_CONTIG, "+", 983222, 983349), "invalid function", 60);
+        // One last weak one.
+        proposals.propose(Location.create(TEST_CONTIG, "+", 905257, 905415), "weak function", 61);
+        // Check the final counts.
+        assertThat(proposals.getProposalCount(), equalTo(4));
+        assertThat(proposals.getMergeCount(), equalTo(1));
+        assertThat(proposals.getWeakCount(), equalTo(2));
+        assertThat(proposals.getRejectedCount(), equalTo(1));
+        assertThat(proposals.getMadeCount(), equalTo(9));
+        // Loop through the list.
+        Iterator<PegProposal> pegIter = proposals.iterator();
+        assertThat(pegIter.next().getFunction(), equalTo("short function"));
+        assertThat(pegIter.next().getFunction(), equalTo("minus protein"));
+        assertThat(pegIter.next().getFunction(), equalTo("far protein"));
+        assertThat(pegIter.next().getFunction(), equalTo("minus 1104"));
+        assertFalse(pegIter.hasNext());
     }
 
     // TODO test proposal lists

@@ -24,8 +24,6 @@ public class PegProposalList implements Iterable<PegProposal> {
     private double minStrength;
     /** number of proposals made */
     private int madeCount;
-    /** number of proposals kept */
-    private int keptCount;
     /** number of invalid proposals */
     private int rejectedCount;
     /** number of weak proposals */
@@ -44,7 +42,6 @@ public class PegProposalList implements Iterable<PegProposal> {
         this.genome = genome;
         this.minStrength = minStrength;
         this.madeCount = 0;
-        this.keptCount = 0;
         this.rejectedCount = 0;
         this.mergeCount = 0;
         this.weakCount = 0;
@@ -60,19 +57,21 @@ public class PegProposalList implements Iterable<PegProposal> {
      * 					the evidence divided by the final location length
      */
     public void propose(Location loc, String function, int evidence) {
+        this.madeCount++;
         PegProposal newProposal = PegProposal.create(this.genome, loc, function, evidence);
         if (newProposal == null) {
             this.rejectedCount++;
         } else if (newProposal.getStrength() < this.minStrength) {
             this.weakCount++;
-        } else if (! this.proposals.add(newProposal)) {
-            this.keptCount++;
         } else {
-            // Here there is a duplicate proposal.  Compare it with the current one.
-            PegProposal oldProposal = this.proposals.tailSet(newProposal).first();
-            if (newProposal.betterThan(oldProposal)) {
-                oldProposal.merge(newProposal);
-                this.mergeCount++;
+            // The proposal is worth keeping.  Try to add it. TRUE means it was added.
+            if (! this.proposals.add(newProposal)) {
+                // Here there is a duplicate proposal.  Compare it with the current one.
+                PegProposal oldProposal = this.proposals.tailSet(newProposal).first();
+                if (newProposal.betterThan(oldProposal)) {
+                    oldProposal.merge(newProposal);
+                    this.mergeCount++;
+                }
             }
         }
     }
@@ -82,13 +81,6 @@ public class PegProposalList implements Iterable<PegProposal> {
      */
     public int getMadeCount() {
         return madeCount;
-    }
-
-    /**
-     * @return the number of proposals kept
-     */
-    public int getKeptCount() {
-        return keptCount;
     }
 
     /**
