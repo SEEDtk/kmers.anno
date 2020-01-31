@@ -43,15 +43,16 @@ public class PegProposal implements Comparable<PegProposal> {
      * @param genome	genome of interest
      * @param loc		location in the genome of the proposed peg
      * @param function	functional assignment for this peg
-     * @param strength	evidence for this proposal
+     * @param evidence	number of base pairs of evidence for this proposal
      *
      * @return the peg proposal, fully extended to a start and a stop, or NULL if the proposal is invalid
      */
-    public static PegProposal create(Genome genome, Location loc, String function, double strength) {
+    public static PegProposal create(Genome genome, Location loc, String function, int evidence) {
         PegProposal retVal = null;
         // Try extending the location.
         Location realLocation = loc.extend(genome);
         if (realLocation != null) {
+            double strength = ((double) evidence) / realLocation.getLength();
             retVal = new PegProposal(realLocation, function, strength);
         }
         return retVal;
@@ -141,6 +142,18 @@ public class PegProposal implements Comparable<PegProposal> {
      */
     public double getStrength() {
         return strength;
+    }
+
+    /**
+     * @return TRUE if this proposal is superior to a specified other proposal.
+     *
+     * @param oldProposal	other proposal for comparison
+     */
+    public boolean betterThan(PegProposal oldProposal) {
+        boolean retVal = (this.strength > oldProposal.strength);
+        if (! retVal && this.strength == oldProposal.strength)
+            retVal = (this.getLoc().getLength() > oldProposal.getLoc().getLength());
+        return retVal;
     }
 
 }

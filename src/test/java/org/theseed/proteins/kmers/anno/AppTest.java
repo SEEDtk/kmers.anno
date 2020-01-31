@@ -139,9 +139,9 @@ public class AppTest extends TestCase
     public void testPegProposals() throws IOException {
         CodonSet starts = new CodonSet("ttg", "ctg", "atg");
         Genome testGto = new Genome(new File("src/test", "test.gto"));
-        PegProposal prop1 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1294, 1302), "hypothetical protein", 100.0);
+        PegProposal prop1 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1249, 1302), "hypothetical protein", 86);
         assertThat(prop1.getFunction(), equalTo("hypothetical protein"));
-        assertThat(prop1.getStrength(), equalTo(100.0));
+        assertThat(prop1.getStrength(), closeTo(0.4155, 0.0001));
         Location loc = prop1.getLoc();
         assertThat(loc.getContigId(), equalTo("51203.13.con.0001"));
         assertThat(loc.getDir(), equalTo('+'));
@@ -154,9 +154,9 @@ public class AppTest extends TestCase
         String dna = testGto.getContig("51203.13.con.0001").getSequence();
         assertTrue(starts.contains(dna, loc.getBegin()));
         // Test comparison and equality.
-        PegProposal prop2 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1261, 1320), "serious protein", 80.0);
+        PegProposal prop2 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1261, 1320), "serious protein", 86);
         assertThat(prop2.getFunction(), equalTo("serious protein"));
-        assertThat(prop2.getStrength(), equalTo(80.0));
+        assertThat(prop2.getStrength(), closeTo(0.5029, 0.0001));
         loc = prop2.getLoc();
         assertThat(loc.getContigId(), equalTo("51203.13.con.0001"));
         assertThat(loc.getDir(), equalTo('+'));
@@ -168,6 +168,8 @@ public class AppTest extends TestCase
         assertThat(prop2.compareTo(prop1), equalTo(0));
         assertThat(prop2, equalTo(prop1));
         assertThat(prop2.hashCode(), equalTo(prop1.hashCode()));
+        assertTrue(prop2.betterThan(prop1));
+        assertFalse(prop1.betterThan(prop2));
         // Test merging.
         prop1.merge(prop2);
         loc = prop1.getLoc();
@@ -176,13 +178,12 @@ public class AppTest extends TestCase
         assertThat(loc.getBegin(), equalTo(1252));
         assertThat(prop2, equalTo(prop1));
         assertThat(prop1.getFunction(), equalTo("serious protein"));
-        assertThat(prop1.getStrength(), equalTo(80.0));
-
+        assertThat(prop1.getStrength(), closeTo(0.5029, 0.0001));
         // Test a bad proposal.
-        prop1 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1261, 1463), "invalid protein", 0.0);
+        prop1 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1261, 1463), "invalid protein", 0);
         assertNull(prop1);
     }
 
-
+    // TODO test proposal lists
 
 }
