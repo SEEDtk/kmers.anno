@@ -8,7 +8,15 @@ import junit.framework.TestSuite;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
+import java.io.File;
+import java.io.IOException;
+
+import org.apache.commons.lang3.StringUtils;
+import org.theseed.counters.CountMap;
+import org.theseed.genome.Feature;
+import org.theseed.genome.Genome;
 import org.theseed.locations.Location;
+import org.theseed.proteins.DnaTranslator;
 import org.theseed.proteins.kmers.KmerReference;
 
 /**
@@ -76,6 +84,49 @@ public class AppTest extends TestCase
         assertThat(loc.getLeft(), equalTo(10));
         assertThat(loc.getBegin(), equalTo(10));
         assertThat(loc.getLength(), equalTo(12));
+    }
+
+    /**
+     * test kmer counting
+     *
+     * @throws IOException
+     */
+    public void testKmerContigCounts() throws IOException {
+        KmerReference.setKmerSize(8);
+        Genome smallGto = new Genome(new File("src/test", "small.gto"));
+        DnaTranslator xlator = new DnaTranslator(smallGto.getGeneticCode());
+        CountMap<KmerReference> kmerCounts = KmerReference.countContigKmers(smallGto);
+        // Verify that we found the kmers in all the right places.
+        for (CountMap<KmerReference>.Count kmerCount : kmerCounts.counts()) {
+            KmerReference kmerRef = kmerCount.getKey();
+            String kmer = kmerRef.getKmer();
+            Location loc = kmerRef.getLoc();
+            assertFalse("Invalid characters in " + kmerRef, StringUtils.containsAny(kmer, 'X', '*'));
+            assertThat("Kmer does not match location in " + kmerRef, kmer, equalTo(xlator.translate(smallGto.getDna(loc))));
+        }
+    }
+
+    /**
+     * test kmer peg counting
+     *
+     * @throws IOException
+     */
+    public void testKmerPegCounts() throws IOException {
+        KmerReference.setKmerSize(8);
+        Genome smallGto = new Genome(new File("src/test", "small.gto"));
+        CountMap<KmerReference> kmerCounts = KmerReference.countPegKmers(smallGto);
+        // Verify that we found the kmers in all the right places.
+        for (CountMap<KmerReference>.Count kmerCount : kmerCounts.counts()) {
+            KmerReference kmerRef = kmerCount.getKey();
+            String kmer = kmerRef.getKmer();
+            Location loc = kmerRef.getLoc();
+            assertFalse("Invalid characters in " + kmerRef, StringUtils.containsAny(kmer, 'X', '*'));
+            // Get the peg's protein.
+            Feature feat = smallGto.getFeature(loc.getContigId());
+            String prot = feat.getProteinTranslation();
+            int offset = loc.getLeft() - 1;
+            assertThat("Kmer does not match location in " + kmerRef, kmer, equalTo(prot.substring(offset, offset + 8)));
+        }
     }
 
 

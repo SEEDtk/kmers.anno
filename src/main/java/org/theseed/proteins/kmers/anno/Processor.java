@@ -9,7 +9,9 @@ import org.kohsuke.args4j.Option;
 import org.theseed.utils.ICommand;
 
 /**
- * main processing class
+ * This program attempts to project proteins from close genomes to a new genome.  The new genome should have its taxonomy
+ * information, close-genome list, genetic code, ID, and name filled in, as well as all of its contigs.  We loop through
+ * the N closest genomes, using kmers to project proteins onto ORFs.
  *
  * @author Bruce Parrello
  *

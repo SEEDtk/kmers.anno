@@ -3,7 +3,13 @@
  */
 package org.theseed.proteins.kmers;
 
+import org.apache.commons.lang3.StringUtils;
+import org.theseed.counters.CountMap;
+import org.theseed.genome.Contig;
+import org.theseed.genome.Feature;
+import org.theseed.genome.Genome;
 import org.theseed.locations.Location;
+import org.theseed.proteins.DnaTranslator;
 
 /**
  * This object represents a protein kmer at a specific location.  It is keyed on the kmer
@@ -104,5 +110,90 @@ public class KmerReference {
         return loc;
     }
 
+    /**
+     * Count all the kmers in the contigs of the specified genome.  Each kmer will be associated with its first occurrence.
+     *
+     * @param genome	genome whose contig kmers are to be counted
+     *
+     * @return a count map of the kmers in the genome
+     */
+    public static CountMap<KmerReference> countContigKmers(Genome genome) {
+        CountMap<KmerReference> retVal = new CountMap<KmerReference>();
+        // Get a DNA translator.
+        DnaTranslator xlator = new DnaTranslator(genome.getGeneticCode());
+        // Loop through the contigs.
+        for (Contig contig : genome.getContigs()) {
+            // Count the kmers on the forward strand.
+            processKmers(retVal, xlator, contig.getId(), new KmerPosition.Plus(contig), contig.getSequence());
+            // Count the kmers on the reverse strand.
+            processKmers(retVal, xlator, contig.getId(), new KmerPosition.Minus(contig), contig.getRSequence());
+        }
+        return retVal;
+    }
+
+    /** Count all the kmers in the pegs of the specified genome.  Each kmer will be associated with its first occurrence.
+     *
+     * @param genome	genome whose peg kmers are to be counted
+     *
+     * @return a count map of the kmers in the genome's protein-encoding genes
+     */
+    public static CountMap<KmerReference> countPegKmers(Genome genome) {
+        CountMap<KmerReference> retVal = new CountMap<KmerReference>();
+        // Loop through the pegs.
+        for (Feature feat : genome.getPegs()) {
+            // Save the feature ID.
+            String fid = feat.getId();
+            // Get the protein translation.
+            String prot = feat.getProteinTranslation();
+            if (prot != null) {
+                // Compute the location of the last kmer.
+                int end = prot.length() - K;
+                // Loop through the protein.
+                for (int i = 0; i < end; i++) {
+                    String kmer = prot.substring(i, i + K);
+                    // Note we make sure there are no ambiguity characters.
+                    if (StringUtils.containsNone(kmer, 'X')) {
+                        KmerReference kmerRef = new KmerReference(kmer, fid, i + 1, "+");
+                        retVal.count(kmerRef);
+                    }
+                }
+            }
+        }
+        return retVal;
+    }
+
+    /**
+     * Count the kmers in a single strand.
+     *
+     * @param counters		kmer counting map
+     * @param xlator		DNA translator for converting to proteins
+     * @param contigId		ID of the source contig
+     * @param calculator	position calculator for this strand
+     * @param sequence		DNA sequence of the strand
+     */
+    private static void processKmers(CountMap<KmerReference> counters, DnaTranslator xlator, String contigId,
+            KmerPosition calculator, String sequence) {
+        // Here we go through each frame, extracting kmers.  We translate the entire sequence, then pull substrings.
+        for (int frame = 1; frame <= 3; frame++) {
+            String frameProtein = xlator.translate(sequence, frame, sequence.length());
+            // Compute the point past the last legal kmer start.
+            int end = frameProtein.length() - K;
+            for (int i = 0; i < end; i++) {
+                // Get the kmer.  We ignore it if it contains ambiguity characters or a stop.
+                String kmerString = frameProtein.substring(i, i + K);
+                if (StringUtils.containsNone(kmerString, '*', 'X')) {
+                    int left = calculator.calcLeft(i, frame);
+                    KmerReference kmer = new KmerReference(kmerString, contigId, left, calculator.getDir());
+                    counters.count(kmer);
+                }
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "KmerReference [" + (kmer != null ? "kmer=" + kmer + ", " : "") + (loc != null ? "loc=" + loc : "")
+                + "]";
+    }
 
 }
