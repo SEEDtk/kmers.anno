@@ -58,7 +58,21 @@ public class PegProposal implements Comparable<PegProposal> {
     }
 
     /**
-     * Compare two peg proposals.  They are equal if they have the same end point and strand.
+     * Override this peg proposal with the information in another.  Note that if the locations
+     * are not compatible, the results will be ridiculous.
+     *
+     * @param other		new proposal to merge
+     */
+    public void merge(PegProposal other) {
+        this.function = other.function;
+        this.loc.setBegin(other.loc.getBegin());
+        this.strength = other.strength;
+    }
+
+
+
+    /**
+     * Compare two peg proposals for sorting.  They are equal if they have the same end point and strand.
      *
      * Otherwise, they are ordered inside the contig by left edge and then length.
      *

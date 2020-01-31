@@ -168,6 +168,16 @@ public class AppTest extends TestCase
         assertThat(prop2.compareTo(prop1), equalTo(0));
         assertThat(prop2, equalTo(prop1));
         assertThat(prop2.hashCode(), equalTo(prop1.hashCode()));
+        // Test merging.
+        prop1.merge(prop2);
+        loc = prop1.getLoc();
+        assertThat(loc.getEnd(), equalTo(1422));
+        assertThat(loc.getRight(), equalTo(1422));
+        assertThat(loc.getBegin(), equalTo(1252));
+        assertThat(prop2, equalTo(prop1));
+        assertThat(prop1.getFunction(), equalTo("serious protein"));
+        assertThat(prop1.getStrength(), equalTo(80.0));
+
         // Test a bad proposal.
         prop1 = PegProposal.create(testGto, Location.create("51203.13.con.0001", "+", 1261, 1463), "invalid protein", 0.0);
         assertNull(prop1);
