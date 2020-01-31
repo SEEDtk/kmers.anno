@@ -58,7 +58,8 @@ public class PegProposal implements Comparable<PegProposal> {
     }
 
     /**
-     * Compare two peg proposals.  They are equal if they have the same right edge.
+     * Compare two peg proposals.  They are equal if they have the same end point and strand.
+     *
      * Otherwise, they are ordered inside the contig by left edge and then length.
      *
      * @param other peg proposal to compare
@@ -71,8 +72,8 @@ public class PegProposal implements Comparable<PegProposal> {
         // Sort by contig first.
         int retVal = this.loc.getContigId().compareTo(other.loc.getContigId());
         if (retVal == 0) {
-            // Only proceed if the right edges are different.
-            if (this.loc.getRight() != other.loc.getRight()) {
+            // Only proceed if the endpoints or strands are different.
+            if (this.loc.getEnd() != other.loc.getEnd() || this.loc.getDir() != other.loc.getDir()) {
                 retVal = this.loc.getLeft() - other.loc.getLeft();
                 if (retVal == 0) {
                     // Shorter locations go first.
@@ -87,10 +88,10 @@ public class PegProposal implements Comparable<PegProposal> {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = (prime * result + ((function == null) ? 0 : function.hashCode())) * prime;
         if (loc != null) {
             result = result + loc.getContigId().hashCode();
-            result = result * prime + loc.getRight();
+            result = result * prime + loc.getDir();
+            result = result * prime + loc.getEnd();
         }
         return result;
     }
@@ -104,7 +105,7 @@ public class PegProposal implements Comparable<PegProposal> {
             return false;
         }
         Location other = ((PegProposal) obj).loc;
-        return (other.getContigId() == this.loc.getContigId() && other.getRight() == this.loc.getRight());
+        return (other.getContigId() == this.loc.getContigId() && other.getEnd() == this.loc.getEnd() && other.getDir() == this.loc.getDir());
     }
 
     /**
