@@ -8,8 +8,16 @@
         </encoder>
     </appender>
 
-    <logger name="org.theseed" level="trace">
+    <appender name="LOGFILE" class="ch.qos.logback.core.FileAppender">
+        <file>${user.dir}/kmers.anno.log</file>
+        <encoder>
+            <pattern>%date [%thread] %-5level %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="org.theseed" level="info">
         <appender-ref ref="STDLOG"/>
+        <appender-ref ref="LOGFILE"/>
     </logger>
 
 </configuration>

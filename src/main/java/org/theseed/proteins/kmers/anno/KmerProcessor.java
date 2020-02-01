@@ -22,11 +22,13 @@ import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
 import org.theseed.locations.FramedLocationLists;
 import org.theseed.locations.Location;
+import org.theseed.locations.PegProposal;
 import org.theseed.locations.PegProposalList;
 import org.theseed.locations.SortedLocationList;
 import org.theseed.p3api.Connection;
 import org.theseed.p3api.P3Genome;
 import org.theseed.p3api.P3Genome.Details;
+import org.theseed.proteins.DnaTranslator;
 import org.theseed.proteins.kmers.KmerReference;
 import org.theseed.utils.ICommand;
 
@@ -60,6 +62,11 @@ public class KmerProcessor implements ICommand {
     Connection p3;
     /** list of locations for each feature, separated vby frame */
     FramedLocationLists framer;
+    /** number of pegs created */
+    int pegCount;
+    /** DNA translator */
+    DnaTranslator xlator;
+
 
     /** logging facility */
     protected static Logger log = LoggerFactory.getLogger(KmerProcessor.class);
@@ -146,7 +153,10 @@ public class KmerProcessor implements ICommand {
             log.info("Annotating proposed genome {}: {}", this.newGenome.getId(), this.newGenome.getName());
             // Our proposed annotations will be accumulated in here.
             log.info("Minimum proposal strength is {}.", this.minStrength);
-            PegProposalList proposals = new PegProposalList(this.newGenome, this.minStrength);
+            // Note that because the evidence is protein evidence, and the proposal is DNA, we need to
+            // divide the strength by 3 to make it work.  The user will never see the real strength.
+            double realStrength = this.minStrength / 3;
+            PegProposalList proposals = new PegProposalList(this.newGenome, realStrength);
             // Get the contig kmers from the new genome.
             Map<String, Location> contigKmers = this.getContigKmers();
             // Extract the close genomes.
@@ -190,10 +200,12 @@ public class KmerProcessor implements ICommand {
                         Feature peg = oldGenome.getFeature(report.getId());
                         pegsFound++;
                         // Determine the minimum number of kmers required to have sufficient
-                        // strength and the maximum proposal length.
-                        int pegLen = peg.getProteinLength();
+                        // strength and the maximum proposal length.  Note that we scale
+                        // the protein length to base pairs, because all our locations
+                        // are DNA locations.
+                        int pegLen = peg.getProteinLength() * 3;
                         int maxLen = (int) (pegLen * this.maxFuzz + 1);
-                        int minKmers = (int) (pegLen * this.minStrength);
+                        int minKmers = (int) (pegLen * realStrength);
                         // Insure we have enough matches to even look.
                         if (minKmers > locList.size())
                             lowKmerCountFound++;
@@ -228,7 +240,47 @@ public class KmerProcessor implements ICommand {
                 // Clear the location lists for the next pass.
                 framer.clear();
             }
-            // TODO create features, removing overlaps
+            // Write the proposal statistics.  Note that we do not list the proposals
+            // discarded because they were weaker versions of existing proposals.
+            log.info("{} proposals made, {} merged, {} rejected, {} too weak, {} kept.",
+                    proposals.getMadeCount(), proposals.getMergeCount(), proposals.getProposalCount(),
+                    proposals.getRejectedCount(), proposals.getWeakCount());
+            // Now we want to loop through the proposals. The proposals are presented in location order.  We keep one proposal in
+            // reserve.  If the next proposal overlaps, we keep the strongest.  If it does not, we convert the proposal
+            // to a feature in the new genome.
+            int overlapCount = 0;
+            Iterator<PegProposal> pIter = proposals.iterator();
+            // Error out if there are no proposals.
+            if (! pIter.hasNext())
+                throw new RuntimeException("No matching proteins found.  Unable to annotate this genome.");
+            // Initialize the peg counter.  We use this to generate IDs.
+            this.pegCount = 0;
+            // Get a DNA translator.
+            this.xlator = new DnaTranslator(newGenome.getGeneticCode());
+            log.info("Using genetic code {}.", newGenome.getGeneticCode());
+            // Loop through the proposals.
+            PegProposal reserve = pIter.next();
+            Location reserveLoc = reserve.getLoc();
+            while (pIter.hasNext()) {
+                PegProposal current = pIter.next();
+                if (reserveLoc.distance(current.getLoc()) < 0) {
+                    // Here the proposals overlap.  This generally means they are on different frames.  We keep the
+                    // better one.
+                    overlapCount++;
+                    if (current.betterThan(reserve)) {
+                        reserve = current;
+                        reserveLoc = current.getLoc();
+                    }
+                } else {
+                    // Here the proposals do not overlap.  Output the reserve, and save the current one.
+                    this.makeFeature(reserve);
+                    reserve = current;
+                    reserveLoc = current.getLoc();
+                }
+            }
+            // All done.  Make a feature from the last reserve.
+            this.makeFeature(reserve);
+            // Write the result.
             if (this.outFile != null) {
                 log.info("Writing genome to {}.", this.outFile);
                 this.newGenome.update(outFile);
@@ -236,9 +288,31 @@ public class KmerProcessor implements ICommand {
                 log.info("Writing genome to standard output.");
                 this.newGenome.update(System.out);
             }
+            log.info("Processing complete. {} features in genome. {} overlaps discarded", this.pegCount, overlapCount);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Store a peg proposal as a feature in the genome.
+     *
+     * @param proposal	location and function of the proposed peg.
+     */
+    private void makeFeature(PegProposal proposal) {
+        // Create the feature ID.
+        this.pegCount++;
+        String fid = String.format("fig|%s.peg.%d", this.newGenome.getId(), this.pegCount);
+        // Get the proposed location.
+        Location loc = proposal.getLoc();
+        // Create the feature.
+        Feature feat = new Feature(fid, proposal.getFunction(), loc.getContigId(), loc.getStrand(), loc.getLeft(), loc.getRight());
+        // Compute the protein translation.
+        String dna = this.newGenome.getDna(loc);
+        String prot = this.xlator.pegTranslate(dna, 1, dna.length());
+        feat.setPgfam(prot);
+        // Store the feature in the genome.
+        this.newGenome.addFeature(feat);
     }
 
     /**
