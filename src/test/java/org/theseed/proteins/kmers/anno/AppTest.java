@@ -237,6 +237,4 @@ public class AppTest extends TestCase
         assertFalse(pegIter.hasNext());
     }
 
-    // TODO test proposal lists
-
 }
