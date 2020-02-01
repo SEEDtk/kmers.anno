@@ -10,15 +10,22 @@ import static org.hamcrest.Matchers.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.theseed.counters.CountMap;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
+import org.theseed.locations.Frame;
+import org.theseed.locations.FramedLocationLists;
 import org.theseed.locations.Location;
 import org.theseed.locations.PegProposal;
 import org.theseed.locations.PegProposalList;
+import org.theseed.locations.SortedLocationList;
 import org.theseed.proteins.CodonSet;
 import org.theseed.proteins.DnaTranslator;
 import org.theseed.proteins.kmers.KmerReference;
@@ -237,4 +244,69 @@ public class AppTest extends TestCase
         assertFalse(pegIter.hasNext());
     }
 
+    /**
+     * test framed location lists
+     */
+    public void testFramedLocations() {
+        FramedLocationLists framer = new FramedLocationLists();
+        // Get some locations.
+        Location loc1p = Location.create("c1", "+", 100, 200);
+        Location loc2p = Location.create("c1", "+", 103, 203);
+        Location loc3p = Location.create("c1", "+", 101, 201);
+        Location loc4p = Location.create("c1", "+", 104, 204);
+        Location loc5p = Location.create("c1", "+", 102, 202);
+        Location loc6p = Location.create("c1", "+", 105, 205);
+        Location loc1m = Location.create("c1", "-", 100, 200);
+        Location loc2m = Location.create("c1", "-", 103, 203);
+        Location loc3m = Location.create("c1", "-", 101, 201);
+        Location loc4m = Location.create("c1", "-", 104, 204);
+        Location loc5m = Location.create("c1", "-", 102, 202);
+        Location loc6m = Location.create("c1", "-", 105, 205);
+        // These sets are used to determine which locations go with with target.
+        HashSet<Location> target1 = new HashSet<Location>();
+        target1.add(loc1p); target1.add(loc2p); target1.add(loc4p); target1.add(loc1m); target1.add(loc2m); target1.add(loc5m);
+        HashSet<Location> target2 = new HashSet<Location>();
+        target2.add(loc3p); target2.add(loc5p); target2.add(loc6p); target2.add(loc3m); target2.add(loc4m); target2.add(loc6m);
+        // Now put these in the framer.
+        for (Location loc : target1) framer.connect("t1", loc);
+        for (Location loc : target2) framer.connect("t2", loc);
+        assertThat(framer.size(), equalTo(12));
+        // This set is used to track what we found.
+        Collection<Location> found = new ArrayList<Location>();
+        // Iterate through the framer.
+        for (FramedLocationLists.Report report : framer) {
+            SortedLocationList locs = report.getList();
+            // Insure we got a valid target back.
+            assertThat(report.getId(), anyOf(equalTo("t1"), equalTo("t2")));
+            // Insure all the locations are for this target and belong to the same frame.
+            Set<Location> target = (report.getId().contentEquals("t1") ? target1 : target2);
+            Frame frm = Frame.XX;
+            for (Location loc : locs) {
+                found.add(loc);
+                assertThat(target, hasItem(loc));
+                if (frm == Frame.XX)
+                    frm = loc.getFrame();
+                else
+                    assertThat(loc.getFrame(), equalTo(frm));
+            }
+        }
+        // Insure we found all the entries and only those entries.
+        assertThat(found.size(), equalTo(12));
+        for (Location loc : target1) assertThat(found, hasItem(loc));
+        for (Location loc : target2) assertThat(found, hasItem(loc));
+        // Clear the lists.
+        framer.clear();
+        Iterator<FramedLocationLists.Report> iter = framer.iterator();
+        assertFalse(iter.hasNext());
+        // Insert just target 1.
+        for (Location loc : target1) framer.connect("t1", loc);
+        // Iterate again, insuring we only have target 1.
+        for (FramedLocationLists.Report report : framer) {
+            assertThat(report.getId(), equalTo("t1"));
+            for (Location loc : report.getList()) {
+                assertThat(target1, hasItem(loc));
+            }
+        }
+        assertThat(framer.size(), equalTo(6));
+    }
 }

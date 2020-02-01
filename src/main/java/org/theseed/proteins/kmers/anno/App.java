@@ -1,15 +1,16 @@
 package org.theseed.proteins.kmers.anno;
 
+import org.theseed.utils.ICommand;
 
 /**
- * Hello world!
+ * Main application
  *
  */
 public class App
 {
     public static void main( String[] args )
     {
-        Processor runObject = new Processor();
+        ICommand runObject = new KmerProcessor();
         boolean ok = runObject.parseCommand(args);
         if (ok) {
             runObject.run();

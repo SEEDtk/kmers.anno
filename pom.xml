@@ -13,6 +13,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
+    <logback.version>1.2.3</logback.version>
+    <slf4jVersion>1.7.21</slf4jVersion>
   </properties>
 
   <dependencies>
@@ -36,6 +38,21 @@
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
       <version>2.1</version>
+    </dependency>
+    <dependency>
+        <groupId>org.theseed</groupId>
+        <artifactId>p3api</artifactId>
+        <version>0.0.1</version>
+    </dependency>
+    <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4jVersion}</version>
+    </dependency>
+    <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>${logback.version}</version>
     </dependency>
   </dependencies>
 
