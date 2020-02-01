@@ -115,7 +115,7 @@ public class KmerProcessor implements ICommand {
         boolean retVal = false;
         // Set the defaults.
         this.help = false;
-        this.minStrength = 0.60;
+        this.minStrength = 0.20;
         this.maxFuzz = 1.5;
         this.maxGenomes = 10;
         // Parse the command line.
@@ -243,8 +243,8 @@ public class KmerProcessor implements ICommand {
             // Write the proposal statistics.  Note that we do not list the proposals
             // discarded because they were weaker versions of existing proposals.
             log.info("{} proposals made, {} merged, {} rejected, {} too weak, {} kept.",
-                    proposals.getMadeCount(), proposals.getMergeCount(), proposals.getProposalCount(),
-                    proposals.getRejectedCount(), proposals.getWeakCount());
+                    proposals.getMadeCount(), proposals.getMergeCount(), proposals.getRejectedCount(),
+                    proposals.getWeakCount(), proposals.getProposalCount());
             // Now we want to loop through the proposals. The proposals are presented in location order.  We keep one proposal in
             // reserve.  If the next proposal overlaps, we keep the strongest.  If it does not, we convert the proposal
             // to a feature in the new genome.
@@ -307,10 +307,10 @@ public class KmerProcessor implements ICommand {
         Location loc = proposal.getLoc();
         // Create the feature.
         Feature feat = new Feature(fid, proposal.getFunction(), loc.getContigId(), loc.getStrand(), loc.getLeft(), loc.getRight());
-        // Compute the protein translation.
+        // Compute the protein translation.  Note we have to trim the stop codon off the translation.
         String dna = this.newGenome.getDna(loc);
-        String prot = this.xlator.pegTranslate(dna, 1, dna.length());
-        feat.setPgfam(prot);
+        String prot = this.xlator.pegTranslate(dna, 1, dna.length() - 3);
+        feat.setProteinTranslation(prot);
         // Store the feature in the genome.
         this.newGenome.addFeature(feat);
     }
