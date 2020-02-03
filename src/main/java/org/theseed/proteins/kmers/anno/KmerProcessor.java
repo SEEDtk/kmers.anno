@@ -91,7 +91,7 @@ public class KmerProcessor implements ICommand {
     private double maxFuzz;
 
     /** kmer length */
-    @Option(name = "-K", aliases = { "--kmer" }, metaVar = "10", usage = "protein kmer length")
+    @Option(name = "-K", aliases = { "--kmer" }, metaVar = "10", usage = "protein kmer length (default 6)")
     private void setKmers(int newSize) {
         KmerReference.setKmerSize(newSize);
     }
