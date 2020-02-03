@@ -3,6 +3,11 @@
  */
 package org.theseed.proteins.kmers;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.HashMap;
+
 import org.apache.commons.lang3.StringUtils;
 import org.theseed.counters.CountMap;
 import org.theseed.genome.Contig;
@@ -110,27 +115,6 @@ public class KmerReference {
         return loc;
     }
 
-    /**
-     * Count all the kmers in the contigs of the specified genome.  Each kmer will be associated with its first occurrence.
-     *
-     * @param genome	genome whose contig kmers are to be counted
-     *
-     * @return a count map of the kmers in the genome
-     */
-    public static CountMap<KmerReference> countContigKmers(Genome genome) {
-        CountMap<KmerReference> retVal = new CountMap<KmerReference>();
-        // Get a DNA translator.
-        DnaTranslator xlator = new DnaTranslator(genome.getGeneticCode());
-        // Loop through the contigs.
-        for (Contig contig : genome.getContigs()) {
-            // Count the kmers on the forward strand.
-            processKmers(retVal, xlator, contig.getId(), new KmerPosition.Plus(contig), contig.getSequence());
-            // Count the kmers on the reverse strand.
-            processKmers(retVal, xlator, contig.getId(), new KmerPosition.Minus(contig), contig.getRSequence());
-        }
-        return retVal;
-    }
-
     /** Count all the kmers in the pegs of the specified genome.  Each kmer will be associated with its first occurrence.
      *
      * @param genome	genome whose peg kmers are to be counted
@@ -163,7 +147,29 @@ public class KmerReference {
     }
 
     /**
-     * Count the kmers in a single strand.
+     * Get all the kmers in the contigs of the specified genome.  Each kmer will be associated with its a list
+     * of locations.
+     *
+     * @param genome	genome whose contig kmers are to be counted
+     *
+     * @return a map of the kmer locations in the genome
+     */
+    public static Map<String, Collection<Location>> getContigKmers(Genome genome) {
+        Map<String, Collection<Location>> retVal = new HashMap<String, Collection<Location>>(genome.getLength() * 2);
+        // Get a DNA translator.
+        DnaTranslator xlator = new DnaTranslator(genome.getGeneticCode());
+        // Loop through the contigs.
+        for (Contig contig : genome.getContigs()) {
+            // Count the kmers on the forward strand.
+            processKmers(retVal, xlator, contig.getId(), new KmerPosition.Plus(contig), contig.getSequence());
+            // Count the kmers on the reverse strand.
+            processKmers(retVal, xlator, contig.getId(), new KmerPosition.Minus(contig), contig.getRSequence());
+        }
+        return retVal;
+    }
+
+    /**
+     * Count the kmers in a single strand of a contig.
      *
      * @param counters		kmer counting map
      * @param xlator		DNA translator for converting to proteins
@@ -171,7 +177,7 @@ public class KmerReference {
      * @param calculator	position calculator for this strand
      * @param sequence		DNA sequence of the strand
      */
-    private static void processKmers(CountMap<KmerReference> counters, DnaTranslator xlator, String contigId,
+    private static void processKmers(Map<String, Collection<Location>> kmers, DnaTranslator xlator, String contigId,
             KmerPosition calculator, String sequence) {
         // Here we go through each frame, extracting kmers.  We translate the entire sequence, then pull substrings.
         for (int frame = 1; frame <= 3; frame++) {
@@ -183,8 +189,14 @@ public class KmerReference {
                 String kmerString = frameProtein.substring(i, i + K);
                 if (StringUtils.containsNone(kmerString, '*', 'X')) {
                     int left = calculator.calcLeft(i, frame);
-                    KmerReference kmer = new KmerReference(kmerString, contigId, left, calculator.getDir());
-                    counters.count(kmer);
+                    Location loc = Location.create(contigId, calculator.getDir(), left, left + K3);
+                    // Associate the location with the kmer.
+                    Collection<Location> locs = kmers.get(kmerString);
+                    if (locs == null) {
+                        locs = new ArrayList<Location>(5);
+                        kmers.put(kmerString, locs);
+                    }
+                    locs.add(loc);
                 }
             }
         }

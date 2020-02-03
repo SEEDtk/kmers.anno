@@ -6,8 +6,6 @@ package org.theseed.proteins.kmers.anno;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +29,7 @@ import org.theseed.p3api.Connection;
 import org.theseed.p3api.P3Genome;
 import org.theseed.p3api.P3Genome.Details;
 import org.theseed.proteins.DnaTranslator;
+import org.theseed.proteins.kmers.KmerFactory;
 import org.theseed.proteins.kmers.KmerReference;
 import org.theseed.utils.ICommand;
 
@@ -62,15 +61,17 @@ public class KmerProcessor implements ICommand {
     // FIELDS
 
     /** input genome */
-    Genome newGenome;
+    private Genome newGenome;
     /** connection to PATRIC */
-    Connection p3;
+    private Connection p3;
     /** list of locations for each feature, separated vby frame */
-    FramedLocationLists framer;
+    private FramedLocationLists framer;
     /** number of pegs created */
-    int pegCount;
+    private int pegCount;
     /** DNA translator */
-    DnaTranslator xlator;
+    private DnaTranslator xlator;
+    /** contig kmer factory */
+    private KmerFactory kmerFactory;
 
     /** logging facility */
     protected static Logger log = LoggerFactory.getLogger(KmerProcessor.class);
@@ -94,6 +95,10 @@ public class KmerProcessor implements ICommand {
     private void setKmers(int newSize) {
         KmerReference.setKmerSize(newSize);
     }
+
+    /** contig kmer algorithm */
+    @Option(name = "--algorithm", usage = "algorithm for retrieving contig kmers")
+    private KmerFactory.Type kmerType;
 
     /** number of close genomes to use */
     @Option(name = "-n", aliases = { "--nGenomes", "--num" }, metaVar = "2", usage = "maximum number of close genomes to scan")
@@ -124,6 +129,7 @@ public class KmerProcessor implements ICommand {
         this.maxGenomes = 10;
         this.inFile = null;
         this.outFile = null;
+        this.kmerType = KmerFactory.Type.AGGRESSIVE;
         // Parse the command line.
         CmdLineParser parser = new CmdLineParser(this);
         try {
@@ -131,10 +137,14 @@ public class KmerProcessor implements ICommand {
             if (this.help) {
                 parser.printUsage(System.err);
             } else {
+                // Verify the options.
                 if (this.minStrength >= 1.0)
                     throw new IllegalArgumentException("Minimum strength must be less than 1.");
                 if (this.maxFuzz <= 1.0)
                     throw new IllegalArgumentException("Length fuzz factor must be greater than 1.");
+                // Create the kmer factory.
+                this.kmerFactory = KmerFactory.create(kmerType);
+                // Denote we can run.
                 retVal = true;
             }
         } catch (CmdLineException e) {
@@ -164,7 +174,8 @@ public class KmerProcessor implements ICommand {
             double realStrength = this.minStrength / 3;
             PegProposalList proposals = new PegProposalList(this.newGenome, realStrength);
             // Get the contig kmers from the new genome.
-            Map<String, Collection<Location>> contigKmers = this.getContigKmers();
+            Map<String, Collection<Location>> contigKmers = this.kmerFactory.findKmers(this.newGenome);
+            log.info("{} kmers found in genome.", contigKmers.size());
             // Extract the close genomes.
             SortedSet<CloseGenome> closeGenomes = this.newGenome.getCloseGenomes();
             log.info("{} close genomes available from input.", closeGenomes.size());
@@ -338,22 +349,4 @@ public class KmerProcessor implements ICommand {
         return retVal;
     }
 
-    /**
-     * @return a map of the kmers in the new genome's contigs
-     */
-    private Map<String, Collection<Location>> getContigKmers() {
-        // Get all the kmers.
-        log.info("Scanning new genome for kmers.  Kmer size = {}.", KmerReference.getKmerSize());
-        CountMap<KmerReference> contigKmers = KmerReference.countContigKmers(this.newGenome);
-        // Keep the unique ones.
-        Map<String, Collection<Location>> retVal = new HashMap<String, Collection<Location>>(contigKmers.size());
-        for (CountMap<KmerReference>.Count kmerCount : contigKmers.counts()) {
-            if (kmerCount.getCount() == 1) {
-                KmerReference ref = kmerCount.getKey();
-                retVal.put(ref.getKmer(), Collections.singleton(ref.getLoc()));
-            }
-        }
-        log.info("{} total protein kmers found in the contigs. {} were unique.", contigKmers.size(), retVal.size());
-        return retVal;
-    }
 }

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -28,6 +29,7 @@ import org.theseed.locations.PegProposalList;
 import org.theseed.locations.SortedLocationList;
 import org.theseed.proteins.CodonSet;
 import org.theseed.proteins.DnaTranslator;
+import org.theseed.proteins.kmers.KmerFactory;
 import org.theseed.proteins.kmers.KmerReference;
 
 /**
@@ -108,14 +110,30 @@ public class AppTest extends TestCase
         KmerReference.setKmerSize(8);
         Genome smallGto = new Genome(new File("src/test", "small.gto"));
         DnaTranslator xlator = new DnaTranslator(smallGto.getGeneticCode());
-        CountMap<KmerReference> kmerCounts = KmerReference.countContigKmers(smallGto);
+        Map<String, Collection<Location>> kmerLocs = KmerReference.getContigKmers(smallGto);
         // Verify that we found the kmers in all the right places.
-        for (CountMap<KmerReference>.Count kmerCount : kmerCounts.counts()) {
-            KmerReference kmerRef = kmerCount.getKey();
-            String kmer = kmerRef.getKmer();
-            Location loc = kmerRef.getLoc();
-            assertFalse("Invalid characters in " + kmerRef, StringUtils.containsAny(kmer, 'X', '*'));
-            assertThat("Kmer does not match location in " + kmerRef, kmer, equalTo(xlator.translate(smallGto.getDna(loc))));
+        verifyKmers(smallGto, xlator, kmerLocs);
+        KmerFactory factory = KmerFactory.create(KmerFactory.Type.AGGRESSIVE);
+        kmerLocs = factory.findKmers(smallGto);
+        verifyKmers(smallGto, xlator, kmerLocs);
+        factory = KmerFactory.create(KmerFactory.Type.STRICT);
+        kmerLocs = factory.findKmers(smallGto);
+        verifyKmers(smallGto, xlator, kmerLocs);
+        for (String kmer : kmerLocs.keySet()) {
+            Collection<Location> locs = kmerLocs.get(kmer);
+            assertThat(locs.size(), equalTo(1));
+        }
+    }
+
+    /**
+     * Verify that a kmer/location map is valid
+     */
+    private void verifyKmers(Genome genome, DnaTranslator xlator, Map<String, Collection<Location>> kmerLocs) {
+        for (String kmer : kmerLocs.keySet()) {
+            for (Location loc : kmerLocs.get(kmer)) {
+                assertFalse("Invalid characters in " + kmer, StringUtils.containsAny(kmer, 'X', '*'));
+                assertThat("Kmer does not match location " + loc, kmer, equalTo(xlator.translate(genome.getDna(loc))));
+            }
         }
     }
 
