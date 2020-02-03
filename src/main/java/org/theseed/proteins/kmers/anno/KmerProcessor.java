@@ -5,6 +5,8 @@ package org.theseed.proteins.kmers.anno;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -49,6 +51,9 @@ import org.theseed.utils.ICommand;
  * -i	name of the input file (overrides STDIN)
  * -o	name of the output file (overrides STDOUT)
  *
+ * --compare	if specified, the name of a GTO file for a genome with the same contigs; the new genome will be compared to
+ * 				the genome in the GTO file
+ *
  * @author Bruce Parrello
  *
  */
@@ -66,7 +71,6 @@ public class KmerProcessor implements ICommand {
     int pegCount;
     /** DNA translator */
     DnaTranslator xlator;
-
 
     /** logging facility */
     protected static Logger log = LoggerFactory.getLogger(KmerProcessor.class);
@@ -118,6 +122,8 @@ public class KmerProcessor implements ICommand {
         this.minStrength = 0.20;
         this.maxFuzz = 1.5;
         this.maxGenomes = 10;
+        this.inFile = null;
+        this.outFile = null;
         // Parse the command line.
         CmdLineParser parser = new CmdLineParser(this);
         try {
@@ -158,7 +164,7 @@ public class KmerProcessor implements ICommand {
             double realStrength = this.minStrength / 3;
             PegProposalList proposals = new PegProposalList(this.newGenome, realStrength);
             // Get the contig kmers from the new genome.
-            Map<String, Location> contigKmers = this.getContigKmers();
+            Map<String, Collection<Location>> contigKmers = this.getContigKmers();
             // Extract the close genomes.
             SortedSet<CloseGenome> closeGenomes = this.newGenome.getCloseGenomes();
             log.info("{} close genomes available from input.", closeGenomes.size());
@@ -181,12 +187,13 @@ public class KmerProcessor implements ICommand {
                     // Match the two kmer sets to build the location lists.
                     for (KmerReference pegKmer : pegKmers) {
                         // Find where this kmer occurs in the new genome.
-                        Location kmerLoc = contigKmers.get(pegKmer.getKmer());
-                        if (kmerLoc != null) {
-                            // We have a match.  Add this as a possible location for the associated peg.
+                        Collection<Location> kmerLocs = contigKmers.get(pegKmer.getKmer());
+                        if (kmerLocs != null) {
+                            // We have a match.  Add these as possible locations for the associated peg.
                             // Note that the "contigID()" in the peg kmer is actually the peg ID, so
                             // the contig location (kmerLoc) will be connected to a peg ID.
-                            this.framer.connect(pegKmer.getLoc().getContigId(), kmerLoc);
+                            for (Location kmerLoc : kmerLocs)
+                                this.framer.connect(pegKmer.getLoc().getContigId(), kmerLoc);
                         }
                     }
                     log.info("{} matching kmers found.", this.framer.size());
@@ -289,6 +296,7 @@ public class KmerProcessor implements ICommand {
                 this.newGenome.update(System.out);
             }
             log.info("Processing complete. {} features in genome. {} overlaps discarded", this.pegCount, overlapCount);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -331,18 +339,18 @@ public class KmerProcessor implements ICommand {
     }
 
     /**
-     * @return a map of the unique kmers in the new genome's contigs
+     * @return a map of the kmers in the new genome's contigs
      */
-    private Map<String, Location> getContigKmers() {
+    private Map<String, Collection<Location>> getContigKmers() {
         // Get all the kmers.
         log.info("Scanning new genome for kmers.  Kmer size = {}.", KmerReference.getKmerSize());
         CountMap<KmerReference> contigKmers = KmerReference.countContigKmers(this.newGenome);
         // Keep the unique ones.
-        Map<String, Location> retVal = new HashMap<String, Location>(contigKmers.size());
+        Map<String, Collection<Location>> retVal = new HashMap<String, Collection<Location>>(contigKmers.size());
         for (CountMap<KmerReference>.Count kmerCount : contigKmers.counts()) {
             if (kmerCount.getCount() == 1) {
                 KmerReference ref = kmerCount.getKey();
-                retVal.put(ref.getKmer(), ref.getLoc());
+                retVal.put(ref.getKmer(), Collections.singleton(ref.getLoc()));
             }
         }
         log.info("{} total protein kmers found in the contigs. {} were unique.", contigKmers.size(), retVal.size());
