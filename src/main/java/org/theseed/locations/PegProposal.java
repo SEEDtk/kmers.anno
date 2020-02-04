@@ -21,7 +21,7 @@ public class PegProposal implements Comparable<PegProposal> {
     /** proposed functional assignment */
     private String function;
     /** evidence for this proposal */
-    private double strength;
+    private int evidence;
 
 
     /**
@@ -29,12 +29,12 @@ public class PegProposal implements Comparable<PegProposal> {
      *
      * @param loc		location containing the peg
      * @param function	functional assignment for this peg
-     * @param strength	evidence for this proposal
+     * @param evidence	evidence for this proposal
      */
-    private PegProposal(Location loc, String function, double strength) {
+    private PegProposal(Location loc, String function, int evidence) {
         this.loc = loc;
         this.function = function;
-        this.strength = strength;
+        this.evidence = evidence;
     }
 
     /**
@@ -52,8 +52,7 @@ public class PegProposal implements Comparable<PegProposal> {
         // Try extending the location.
         Location realLocation = loc.extend(genome);
         if (realLocation != null) {
-            double strength = ((double) evidence) / realLocation.getLength();
-            retVal = new PegProposal(realLocation, function, strength);
+           retVal = new PegProposal(realLocation, function, evidence);
         }
         return retVal;
     }
@@ -67,7 +66,7 @@ public class PegProposal implements Comparable<PegProposal> {
     public void merge(PegProposal other) {
         this.function = other.function;
         this.loc.setBegin(other.loc.getBegin());
-        this.strength = other.strength;
+        this.evidence = other.evidence;
     }
 
 
@@ -141,19 +140,26 @@ public class PegProposal implements Comparable<PegProposal> {
      * @return the strength of this proposal's evidence
      */
     public double getStrength() {
-        return strength;
+        return (double) evidence / loc.getLength();
     }
 
     /**
      * @return TRUE if this proposal is superior to a specified other proposal.
      *
-     * @param oldProposal	other proposal for comparison
+     * @param other	other proposal for comparison
      */
-    public boolean betterThan(PegProposal oldProposal) {
-        boolean retVal = (this.strength > oldProposal.strength);
-        if (! retVal && this.strength == oldProposal.strength)
-            retVal = (this.getLoc().getLength() > oldProposal.getLoc().getLength());
+    public boolean betterThan(PegProposal other) {
+        boolean retVal = (this.evidence > other.evidence);
+        if (! retVal && this.evidence == other.evidence)
+            retVal = (this.getLoc().getLength() > other.getLoc().getLength());
         return retVal;
+    }
+
+    /**
+     * @return the evidence count
+     */
+    public int getEvidence() {
+        return evidence;
     }
 
 }

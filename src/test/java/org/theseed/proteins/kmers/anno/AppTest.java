@@ -197,8 +197,8 @@ public class AppTest extends TestCase
         assertThat(prop2.compareTo(prop1), equalTo(0));
         assertThat(prop2, equalTo(prop1));
         assertThat(prop2.hashCode(), equalTo(prop1.hashCode()));
-        assertTrue(prop2.betterThan(prop1));
-        assertFalse(prop1.betterThan(prop2));
+        assertTrue(prop1.betterThan(prop2));
+        assertFalse(prop2.betterThan(prop1));
         // Test merging.
         prop1.merge(prop2);
         loc = prop1.getLoc();
@@ -235,7 +235,7 @@ public class AppTest extends TestCase
         assertThat(proposals.getMergeCount(), equalTo(0));
         assertThat(proposals.getMadeCount(), equalTo(3));
         // Shorter with more strength, gets merged.
-        proposals.propose(Location.create(TEST_CONTIG, "+", 1261, 1320), "short function", 133);
+        proposals.propose(Location.create(TEST_CONTIG, "+", 1261, 1320), "short function", 141);
         assertThat(proposals.getProposalCount(), equalTo(1));
         assertThat(proposals.getMergeCount(), equalTo(1));
         assertThat(proposals.getMadeCount(), equalTo(4));

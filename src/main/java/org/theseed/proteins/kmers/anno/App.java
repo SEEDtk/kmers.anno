@@ -22,8 +22,11 @@ public class App
         ICommand processor;
         // Parse the parameters.
         switch (command) {
-        case "kmers" :
-            processor = new KmerProcessor();
+        case "annotate" :
+            processor = new GenomeKmerProcessor();
+            break;
+        case "rerun" :
+            processor = new BatchKmerProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command.  Must be \"kmers\".");

@@ -55,8 +55,11 @@ public class PegProposalList implements Iterable<PegProposal> {
      * @param function	the proposed functional assignment
      * @param evidence	the number of base pairs of evidence for the proposal; the strength is
      * 					the evidence divided by the final location length
+     *
+     * @return the new proposal if it took, else FALSE
      */
-    public void propose(Location loc, String function, int evidence) {
+    public PegProposal propose(Location loc, String function, int evidence) {
+        PegProposal retVal = null;
         this.madeCount++;
         PegProposal newProposal = PegProposal.create(this.genome, loc, function, evidence);
         if (newProposal == null) {
@@ -65,15 +68,20 @@ public class PegProposalList implements Iterable<PegProposal> {
             this.weakCount++;
         } else {
             // The proposal is worth keeping.  Try to add it. TRUE means it was added.
-            if (! this.proposals.add(newProposal)) {
+            boolean added = this.proposals.add(newProposal);
+            if (added) {
+                retVal = newProposal;
+            } else {
                 // Here there is a duplicate proposal.  Compare it with the current one.
                 PegProposal oldProposal = this.proposals.tailSet(newProposal).first();
                 if (newProposal.betterThan(oldProposal)) {
                     oldProposal.merge(newProposal);
                     this.mergeCount++;
+                    retVal = oldProposal;
                 }
             }
         }
+        return retVal;
     }
 
     /**
