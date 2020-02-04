@@ -22,10 +22,10 @@ public class App
         ICommand processor;
         // Parse the parameters.
         switch (command) {
-        case "annotate" :
+        case "kmers" :
             processor = new GenomeKmerProcessor();
             break;
-        case "rerun" :
+        case "batch" :
             processor = new BatchKmerProcessor();
             break;
         default:

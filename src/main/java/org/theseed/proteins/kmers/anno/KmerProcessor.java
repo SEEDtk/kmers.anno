@@ -41,7 +41,7 @@ public class KmerProcessor {
     protected static Logger log = LoggerFactory.getLogger(GenomeKmerProcessor.class);
 
     /** connection to PATRIC */
-    protected Connection p3;
+    private Connection p3;
     /** list of locations for each feature, separated vby frame */
     private FramedLocationLists framer;
     /** number of pegs created */
@@ -96,6 +96,9 @@ public class KmerProcessor {
             throw new IllegalArgumentException("Length fuzz factor must be greater than 1.");
         // Create the kmer factory.
         this.kmerFactory = KmerFactory.create(kmerType);
+        // Connect to PATRIC.
+        log.info("Connecting to PATRIC.");
+        this.p3 = new Connection();
     }
 
     /**

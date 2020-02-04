@@ -10,7 +10,6 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.theseed.genome.Genome;
-import org.theseed.p3api.Connection;
 import org.theseed.utils.ICommand;
 
 /**
@@ -84,7 +83,6 @@ public class GenomeKmerProcessor extends KmerProcessor implements ICommand {
     public void run() {
         try {
             log.info("Connecting to PATRIC.");
-            this.p3 = new Connection();
             Genome newGenome;
             if (this.inFile != null) {
                 log.info("Reading genome from {}.", this.inFile);
