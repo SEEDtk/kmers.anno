@@ -118,8 +118,6 @@ public class KmerProcessor {
      */
     protected void annotateGenome(Genome genome) {
         log.info("Annotating proposed genome {}: {}", genome.getId(), genome.getName());
-        // Clear the peg counter.
-        this.pegCount = 0;
         // Our proposed annotations will be accumulated in here.
         log.info("Minimum proposal strength is {}.  Kmer size is {}.", this.minStrength, KmerReference.getKmerSize());
         // Note that because the evidence is protein evidence, and the proposal is DNA, we need to
@@ -221,42 +219,17 @@ public class KmerProcessor {
         log.info("{} proposals made, {} merged, {} rejected, {} too weak, {} kept.",
                 proposals.getMadeCount(), proposals.getMergeCount(), proposals.getRejectedCount(),
                 proposals.getWeakCount(), proposals.getProposalCount());
-        // Now we want to loop through the proposals. The proposals are presented in location order.  We keep one proposal in
-        // reserve.  If the next proposal overlaps, we keep the strongest.  If it does not, we convert the proposal
-        // to a feature in the new genome.
-        int overlapCount = 0;
-        Iterator<PegProposal> pIter = proposals.iterator();
-        // Error out if there are no proposals.
-        if (! pIter.hasNext())
-            throw new RuntimeException("No matching proteins found.  Unable to annotate this genome.");
+        // Now we want to loop through the proposals, creating features.
         // Initialize the peg counter.  We use this to generate IDs.
         this.pegCount = 0;
         // Get a DNA translator.
         this.xlator = new DnaTranslator(genome.getGeneticCode());
         log.info("Using genetic code {}.", genome.getGeneticCode());
-        // Loop through the proposals.
-        PegProposal reserve = pIter.next();
-        Location reserveLoc = reserve.getLoc();
-        while (pIter.hasNext()) {
-            PegProposal current = pIter.next();
-            if (reserveLoc.distance(current.getLoc()) < 0) {
-                // Here the proposals overlap.  This generally means they are on different frames.  We keep the
-                // better one.
-                overlapCount++;
-                if (current.betterThan(reserve)) {
-                    reserve = current;
-                    reserveLoc = current.getLoc();
-                }
-            } else {
-                // Here the proposals do not overlap.  Output the reserve, and save the current one.
-                this.makeFeature(reserve, genome);
-                reserve = current;
-                reserveLoc = current.getLoc();
-            }
+        for (PegProposal current : proposals) {
+            this.makeFeature(current, genome);
         }
-        // All done.  Make a feature from the last reserve.
-        this.makeFeature(reserve, genome);
-        log.info("Processing complete. {} features in genome. {} overlaps discarded", this.pegCount, overlapCount);
+        // All done.
+        log.info("Processing complete. {} features in genome.", this.pegCount);
     }
 
     /**
