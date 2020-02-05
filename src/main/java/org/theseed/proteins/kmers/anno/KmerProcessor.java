@@ -57,8 +57,8 @@ public class KmerProcessor {
     @Option(name = "-h", aliases = { "--help" }, help = true)
     protected boolean help;
     /** minimum acceptable proposal strength */
-    @Option(name = "-m", aliases = { "--minStrength",
-            "--min" }, metaVar = "0.50", usage = "minimum acceptable proposal strength (0 to 1)")
+    @Option(name = "-m", aliases = { "--minStrength", "--min" }, metaVar = "0.50",
+            usage = "minimum acceptable proposal strength (0 to 1)")
     private double minStrength;
     /** maximum length factor */
     @Option(name = "-f", aliases = { "--fuzz", "--maxLength",
@@ -67,7 +67,10 @@ public class KmerProcessor {
     /** contig kmer algorithm */
     @Option(name = "--algorithm", usage = "algorithm for retrieving contig kmers")
     private KmerFactory.Type kmerType;
-
+    /** minimum evidence */
+    @Option(name = "-e", aliases = { "--minEvidence" }, metaVar = "2",
+            usage = "minimum acceptable proposal kmers")
+    private int minEvidence;
     /** kmer length */
     @Option(name = "-K", aliases = { "--kmer" }, metaVar = "10", usage = "protein kmer length (default 6)")
     private void setKmers(int newSize) {
@@ -110,6 +113,7 @@ public class KmerProcessor {
         this.minStrength = 0.20;
         this.maxFuzz = 1.5;
         this.maxGenomes = 10;
+        this.minEvidence = 0;
         this.kmerType = KmerFactory.Type.AGGRESSIVE;
     }
 
@@ -125,7 +129,7 @@ public class KmerProcessor {
         // Note that because the evidence is protein evidence, and the proposal is DNA, we need to
         // divide the strength by 3 to make it work.  The user will never see the real strength.
         double realStrength = this.minStrength / 3;
-        PegProposalList proposals = new PegProposalList(genome, realStrength);
+        PegProposalList proposals = new PegProposalList(genome, realStrength, this.minEvidence);
         // Get the contig kmers from the new genome.
         Map<String, Collection<Location>> contigKmers = this.kmerFactory.findKmers(genome);
         log.info("{} kmers found in genome.", contigKmers.size());

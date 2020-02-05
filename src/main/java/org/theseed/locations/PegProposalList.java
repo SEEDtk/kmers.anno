@@ -28,23 +28,29 @@ public class PegProposalList implements Iterable<PegProposal> {
     private int rejectedCount;
     /** number of weak proposals */
     private int weakCount;
+    /** number of insufficient-evidence proposals */
+    private int smallCount;
     /** number of proposals merged */
     private int mergeCount;
     /** list of proposals */
     SortedSet<PegProposal> proposals;
     /** target genome for the proposals */
     Genome genome;
+    /** minimum acceptable evidence */
+    private int minEvidence;
 
     /**
      * Create a new peg proposal list.
      */
-    public PegProposalList(Genome genome, double minStrength) {
+    public PegProposalList(Genome genome, double minStrength, int minEvidence) {
         this.genome = genome;
         this.minStrength = minStrength;
+        this.minEvidence = minEvidence;
         this.madeCount = 0;
         this.rejectedCount = 0;
         this.mergeCount = 0;
         this.weakCount = 0;
+        this.smallCount = 0;
         this.proposals = new TreeSet<PegProposal>();
     }
 
@@ -66,6 +72,8 @@ public class PegProposalList implements Iterable<PegProposal> {
             this.rejectedCount++;
         } else if (newProposal.getStrength() < this.minStrength) {
             this.weakCount++;
+        } else if (evidence < this.minEvidence) {
+            this.smallCount++;
         } else {
             // The proposal is worth keeping.  Try to add it. TRUE means it was added.
             boolean added = this.proposals.add(newProposal);
@@ -122,6 +130,13 @@ public class PegProposalList implements Iterable<PegProposal> {
      */
     public int getWeakCount() {
         return weakCount;
+    }
+
+    /**
+     * @return the number of proposals discarded for too little evidence
+     */
+    public int getSmallCount() {
+        return smallCount;
     }
 
 }

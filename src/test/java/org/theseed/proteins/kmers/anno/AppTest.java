@@ -219,7 +219,7 @@ public class AppTest extends TestCase
      */
     public void testProposalLists() throws IOException {
         Genome testGto = new Genome(new File("src/test", "test.gto"));
-        PegProposalList proposals = new PegProposalList(testGto, 0.50);
+        PegProposalList proposals = new PegProposalList(testGto, 0.50, 80);
         // First test-- too weak
         proposals.propose(Location.create(TEST_CONTIG, "+", 1249, 1302), "long function", 69);
         assertThat(proposals.getWeakCount(), equalTo(1));
@@ -239,6 +239,18 @@ public class AppTest extends TestCase
         assertThat(proposals.getProposalCount(), equalTo(1));
         assertThat(proposals.getMergeCount(), equalTo(1));
         assertThat(proposals.getMadeCount(), equalTo(4));
+        assertThat(proposals.getSmallCount(), equalTo(0));
+        // Test min-evidence filter.
+        proposals.propose(Location.create(TEST_CONTIG, "-", 100, 110), "small function", 75);
+        assertThat(proposals.getProposalCount(), equalTo(1));
+        assertThat(proposals.getMergeCount(), equalTo(1));
+        assertThat(proposals.getMadeCount(), equalTo(5));
+        assertThat(proposals.getSmallCount(), equalTo(1));
+        proposals.propose(Location.create(TEST_CONTIG, "-", 100, 110), "small function", 85);
+        assertThat(proposals.getProposalCount(), equalTo(2));
+        assertThat(proposals.getMergeCount(), equalTo(1));
+        assertThat(proposals.getMadeCount(), equalTo(6));
+        assertThat(proposals.getSmallCount(), equalTo(1));
         // Add some more for variety.
         proposals.propose(Location.create(TEST_CONTIG, "+", 825851, 825853), "far protein", 163);
         proposals.propose(Location.create(TEST_CONTIG, "-", 777932, 779122), "minus protein", 600);
@@ -248,13 +260,15 @@ public class AppTest extends TestCase
         // One last weak one.
         proposals.propose(Location.create(TEST_CONTIG, "+", 905257, 905415), "weak function", 61);
         // Check the final counts.
-        assertThat(proposals.getProposalCount(), equalTo(4));
+        assertThat(proposals.getProposalCount(), equalTo(5));
         assertThat(proposals.getMergeCount(), equalTo(1));
         assertThat(proposals.getWeakCount(), equalTo(2));
         assertThat(proposals.getRejectedCount(), equalTo(1));
-        assertThat(proposals.getMadeCount(), equalTo(9));
+        assertThat(proposals.getSmallCount(), equalTo(1));
+        assertThat(proposals.getMadeCount(), equalTo(11));
         // Loop through the list.
         Iterator<PegProposal> pegIter = proposals.iterator();
+        assertThat(pegIter.next().getFunction(), equalTo("small function"));
         assertThat(pegIter.next().getFunction(), equalTo("short function"));
         assertThat(pegIter.next().getFunction(), equalTo("minus protein"));
         assertThat(pegIter.next().getFunction(), equalTo("far protein"));
