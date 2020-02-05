@@ -222,9 +222,9 @@ public class KmerProcessor {
         }
         // Write the proposal statistics.  Note that we do not list the proposals
         // discarded because they were weaker versions of existing proposals.
-        log.info("{} proposals made, {} merged, {} rejected, {} too weak, {} kept.",
+        log.info("{} proposals made, {} merged, {} rejected, {} too weak, {} too little evidence, {} kept.",
                 proposals.getMadeCount(), proposals.getMergeCount(), proposals.getRejectedCount(),
-                proposals.getWeakCount(), proposals.getProposalCount());
+                proposals.getWeakCount(), proposals.getSmallCount(), proposals.getProposalCount());
         // Now we want to loop through the proposals, creating features.
         // Initialize the peg counter.  We use this to generate IDs.
         this.pegCount = 0;

@@ -96,7 +96,7 @@ public class BatchKmerProcessor extends KmerProcessor implements ICommand {
                     gCount++;
                 }
             }
-            log.info("Processing complete.  {} genomes annotated, {} seconds / genome.", gCount, (double) (System.currentTimeMillis() - start) / gCount);
+            log.info("Processing complete.  {} genomes annotated, {} seconds / genome.", gCount, (double) (System.currentTimeMillis() - start) / (gCount * 1000));
         } catch (Exception e) {
             e.printStackTrace();
         }
