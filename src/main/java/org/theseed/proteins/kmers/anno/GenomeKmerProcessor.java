@@ -26,9 +26,12 @@ import org.theseed.utils.ICommand;
  * -f	maximum factor for length increase in forming a proposal
  * -K	kmer length to use
  * -n	number of close genomes to use
+ * -e	minimum number of kmers required for a proposal to be acceptable
  * -i	name of the input file (overrides STDIN)
  * -o	name of the output file (overrides STDOUT)
  *
+ * --cache		name of a directory where GTOs are cached
+ * --minLength	maximum factor for length decrease when forming a proposal
  * --algorithm	kmer algorithm to use-- STRICT (only match kmers unique in the contigs) or AGGRESSIVE (match all kmers in the contigs)
  * --trace		if specified, the name of a functional assignment; information about the function will be written to the log
  *
@@ -76,6 +79,8 @@ public class GenomeKmerProcessor extends KmerProcessor implements ICommand {
             System.err.println(e.getMessage());
             // For parameter errors, we display the command usage.
             parser.printUsage(System.err);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         return retVal;
     }

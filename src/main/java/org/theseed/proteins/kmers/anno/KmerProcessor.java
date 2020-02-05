@@ -1,5 +1,8 @@
 package org.theseed.proteins.kmers.anno;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -57,13 +60,17 @@ public class KmerProcessor {
     @Option(name = "-h", aliases = { "--help" }, help = true)
     protected boolean help;
     /** minimum acceptable proposal strength */
-    @Option(name = "-m", aliases = { "--minStrength", "--min" }, metaVar = "0.50",
+    @Option(name = "-m", aliases = { "--minStrength", "--min" }, metaVar = "0.30",
             usage = "minimum acceptable proposal strength (0 to 1)")
     private double minStrength;
     /** maximum length factor */
     @Option(name = "-f", aliases = { "--fuzz", "--maxLength",
             "--max" }, metaVar = "2.0", usage = "maximum length increase factor for proteins (>= 1)")
     private double maxFuzz;
+    /** minimum length factor */
+    @Option(name = "--minLength", aliases = { "--minFuzz" }, metaVar = "0.5",
+            usage = "maximum length decrease factor for proteins (<= 1")
+    private double minFuzz;
     /** contig kmer algorithm */
     @Option(name = "--algorithm", usage = "algorithm for retrieving contig kmers")
     private KmerFactory.Type kmerType;
@@ -72,15 +79,17 @@ public class KmerProcessor {
             usage = "minimum acceptable proposal kmers")
     private int minEvidence;
     /** kmer length */
-    @Option(name = "-K", aliases = { "--kmer" }, metaVar = "10", usage = "protein kmer length (default 6)")
+    @Option(name = "-K", aliases = { "--kmer" }, metaVar = "10", usage = "protein kmer length (default 8)")
     private void setKmers(int newSize) {
         KmerReference.setKmerSize(newSize);
     }
-
     /** number of close genomes to use */
     @Option(name = "-n", aliases = { "--nGenomes",
             "--num" }, metaVar = "2", usage = "maximum number of close genomes to scan")
     private int maxGenomes;
+    /** directory to use as a cache for genomes */
+    @Option(name = "--cache", usage = "directory for saving PATRIC genomes for re-use")
+    private File cache;
 
     /** function assignment for special tracing */
     @Option(name = "--trace", usage = "function assignment to be traced")
@@ -92,13 +101,18 @@ public class KmerProcessor {
 
     /**
      * Verify that the command-line options are correct.
+     * @throws IOException
      */
-    protected void validateParms() {
+    protected void validateParms() throws IOException {
         // Verify the options.
         if (this.minStrength >= 1.0)
             throw new IllegalArgumentException("Minimum strength must be less than 1.");
         if (this.maxFuzz <= 1.0)
-            throw new IllegalArgumentException("Length fuzz factor must be greater than 1.");
+            throw new IllegalArgumentException("Max length factor must be greater than 1.");
+        if (this.minFuzz > 1.0)
+            throw new IllegalArgumentException("Min length factor must be less than or equal to 1.");
+        if (this.cache != null && ! this.cache.isDirectory())
+            throw new FileNotFoundException("Genome cache is not a directory.");
         // Create the kmer factory.
         this.kmerFactory = KmerFactory.create(kmerType);
         // Connect to PATRIC.
@@ -110,10 +124,11 @@ public class KmerProcessor {
      * Set the default command-line options.
      */
     protected void setDefaults() {
-        this.minStrength = 0.20;
+        this.minStrength = 0.50;
         this.maxFuzz = 1.5;
+        this.minFuzz = 0.6;
         this.maxGenomes = 10;
-        this.minEvidence = 0;
+        this.minEvidence = 10;
         this.kmerType = KmerFactory.Type.AGGRESSIVE;
     }
 
@@ -121,8 +136,10 @@ public class KmerProcessor {
      * Annotate a genome.
      *
      * @param genome		genome to annotate
+     *
+     * @throws IOException
      */
-    protected void annotateGenome(Genome genome) {
+    protected void annotateGenome(Genome genome) throws IOException {
         log.info("Annotating proposed genome {}: {}", genome.getId(), genome.getName());
         // Our proposed annotations will be accumulated in here.
         log.info("Minimum proposal strength is {}.  Kmer size is {}.", this.minStrength, KmerReference.getKmerSize());
@@ -145,7 +162,7 @@ public class KmerProcessor {
             CloseGenome closeGenome = iter.next();
             log.info("Retrieving close genome #{} {}: {}.", iGenome,
                     closeGenome.getGenomeId(), closeGenome.getGenomeName());
-            Genome oldGenome = P3Genome.Load(p3, closeGenome.getGenomeId(), Details.PROTEINS);
+            Genome oldGenome = P3Genome.Load(p3, closeGenome.getGenomeId(), Details.PROTEINS, this.cache);
             if (oldGenome == null) {
                 log.warn("Genome {} not found-- skipping.");
             } else {
@@ -169,6 +186,7 @@ public class KmerProcessor {
                 int pegsFound = 0;
                 int lowKmerCountFound = 0;
                 int proposalCount = 0;
+                int tooShortProtein = 0;
                 for (FramedLocationLists.Report report : this.framer) {
                     SortedLocationList locList = report.getList();
                     // Get the feature corresponding to this report.
@@ -180,6 +198,7 @@ public class KmerProcessor {
                     // are DNA locations.
                     int pegLen = peg.getProteinLength() * 3;
                     int maxLen = (int) (pegLen * this.maxFuzz + 1);
+                    int minLen = (int) (pegLen * this.minFuzz);
                     int minKmers = (int) (pegLen * realStrength);
                     // Insure we have enough matches to even look.
                     if (minKmers > locList.size())
@@ -195,6 +214,7 @@ public class KmerProcessor {
                             // Determine the last permissible right edge and the actual right
                             // edge.
                             int maxEdge = firstLoc.getLeft() + maxLen;
+                            int minEdge = firstLoc.getLeft() + minLen;
                             int bestEdge = firstLoc.getRight();
                             for (Location loc : locList.contigRange(i)) {
                                 if (loc.getRight() < maxEdge) {
@@ -202,20 +222,24 @@ public class KmerProcessor {
                                     bestEdge = Math.max(loc.getRight(), bestEdge);
                                 }
                             }
-                            // Propose this peg.
-                            Location wholeLoc = Location.create(firstLoc.getContigId(), firstLoc.getStrand(), firstLoc.getLeft(), bestEdge);
-                            PegProposal found = proposals.propose(wholeLoc, peg.getFunction(), evidenceCount);
-                            // Here we check for the function we're debugging.  This equals function is null-safe.
-                            if (found != null && StringUtils.equals(this.traceFunction, peg.getFunction())) {
-                                log.info("Proposal stored using {} at location {} with evidence {} and strength {}.", peg.getId(), wholeLoc,
-                                        evidenceCount, found.getStrength());
+                            if (bestEdge < minEdge) {
+                                tooShortProtein++;
+                            } else {
+                                // Propose this peg.
+                                Location wholeLoc = Location.create(firstLoc.getContigId(), firstLoc.getStrand(), firstLoc.getLeft(), bestEdge);
+                                PegProposal found = proposals.propose(wholeLoc, peg.getFunction(), evidenceCount);
+                                // Here we check for the function we're debugging.  This equals function is null-safe.
+                                if (found != null && StringUtils.equals(this.traceFunction, peg.getFunction())) {
+                                    log.info("Proposal stored using {} at location {} with evidence {} and strength {}.", peg.getId(), wholeLoc,
+                                            evidenceCount, found.getStrength());
+                                }
+                                proposalCount++;
                             }
-                            proposalCount++;
                         }
                     }
                 }
-                log.info("{} peg/frame pairs examined, {} had too few kmers, {} proposals were made.",
-                        pegsFound, lowKmerCountFound, proposalCount);
+                log.info("{} peg/frame pairs examined, {} had too few kmers, {} were too short, {} proposals were made.",
+                        pegsFound, lowKmerCountFound, tooShortProtein, proposalCount);
             }
             // Clear the location lists for the next pass.
             framer.clear();
