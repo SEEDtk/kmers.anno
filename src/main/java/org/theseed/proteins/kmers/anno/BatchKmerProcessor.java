@@ -73,6 +73,7 @@ public class BatchKmerProcessor extends KmerProcessor implements ICommand {
     public void run() {
         try {
             // The basic process is to run through the input file one line at a time.
+            long start = System.currentTimeMillis();
             File dir = this.inFile.getAbsoluteFile().getParentFile();
             log.info("Reading GTO names from {} in directory {}.", this.inFile, dir);
             int gCount = 0;
@@ -95,7 +96,7 @@ public class BatchKmerProcessor extends KmerProcessor implements ICommand {
                     gCount++;
                 }
             }
-            log.info("Processing complete.  {} genomes annotated.", gCount);
+            log.info("Processing complete.  {} genomes annotated, {} seconds / genome.", gCount, (double) (System.currentTimeMillis() - start) / gCount);
         } catch (Exception e) {
             e.printStackTrace();
         }

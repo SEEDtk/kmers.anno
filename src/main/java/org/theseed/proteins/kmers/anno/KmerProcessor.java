@@ -78,6 +78,8 @@ public class KmerProcessor {
     @Option(name = "-n", aliases = { "--nGenomes",
             "--num" }, metaVar = "2", usage = "maximum number of close genomes to scan")
     private int maxGenomes;
+
+    /** function assignment for special tracing */
     @Option(name = "--trace", usage = "function assignment to be traced")
     private String traceFunction;
 
@@ -250,6 +252,9 @@ public class KmerProcessor {
         String dna = genome.getDna(loc);
         String prot = this.xlator.pegTranslate(dna, 1, dna.length() - 3);
         feat.setProteinTranslation(prot);
+        // Store the evidence and strength.
+        feat.addAnnotation(String.format("Annotated with evidence %d and strength %2.4f", proposal.getEvidence(), proposal.getStrength()), "kmers.anno");
+        feat.addAnnotation("Set function to " + proposal.getFunction(), "kmers.anno");
         // Store the feature in the genome.
         genome.addFeature(feat);
     }

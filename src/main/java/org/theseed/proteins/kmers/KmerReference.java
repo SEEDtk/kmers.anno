@@ -26,10 +26,10 @@ import org.theseed.proteins.DnaTranslator;
 public class KmerReference {
 
     /** protein kmer size */
-    private static int K = 6;
+    private static int K = 8;
 
     /** offset from start of kmer to end */
-    private static int K3 = 17;
+    private static int K3 = 23;
 
     // FIELDS
 
