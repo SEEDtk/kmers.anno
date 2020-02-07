@@ -29,6 +29,9 @@ import org.theseed.proteins.DnaTranslator;
 import org.theseed.proteins.kmers.KmerFactory;
 import org.theseed.proteins.kmers.KmerReference;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+
 /**
  * This is the base class for annotating a genome.  It provides methods for handling the common
  * command-line processing and for annotating a single genome in place.
@@ -59,6 +62,9 @@ public class KmerProcessor {
     /** help option */
     @Option(name = "-h", aliases = { "--help" }, help = true)
     protected boolean help;
+    /** debug-message flag */
+    @Option(name = "-v", aliases = { "--verbose", "--debug" }, usage = "show more detailed progress messages")
+    private boolean debug;
     /** minimum acceptable proposal strength */
     @Option(name = "-m", aliases = { "--minStrength", "--min" }, metaVar = "0.30",
             usage = "minimum acceptable proposal strength (0 to 1)")
@@ -118,6 +124,12 @@ public class KmerProcessor {
         // Connect to PATRIC.
         log.info("Connecting to PATRIC.");
         this.p3 = new Connection();
+        if (this.debug) {
+            // To get more progress messages, we set the log level in logback.
+            LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+            ch.qos.logback.classic.Logger logger = loggerContext.getLogger("org.theseed");
+            logger.setLevel(Level.toLevel("TRACE"));
+        }
     }
 
     /**
@@ -126,7 +138,7 @@ public class KmerProcessor {
     protected void setDefaults() {
         this.minStrength = 0.50;
         this.maxFuzz = 1.5;
-        this.minFuzz = 0.6;
+        this.minFuzz = 0.8;
         this.maxGenomes = 10;
         this.minEvidence = 10;
         this.kmerType = KmerFactory.Type.AGGRESSIVE;
