@@ -12,7 +12,7 @@ import org.theseed.utils.ICommand;
 
 /**
  * This program attempts to project proteins from close genomes to genomes that need re-annotation.  For each one,
- * we loop through  * the N closest genomes, using kmers to project proteins onto ORFs.
+ * we loop through the N closest genomes, using kmers to project proteins onto ORFs.
  *
  * The incoming genomes should be in the form of GTOs.  We read a list of input and output file names from
  * an input file.  These come in via a tab-delimited file, with the input names in the first column and the
