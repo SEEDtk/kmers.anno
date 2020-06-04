@@ -147,7 +147,7 @@ public class KmerReference {
     }
 
     /**
-     * Get all the kmers in the contigs of the specified genome.  Each kmer will be associated with its a list
+     * Get all the kmers in the contigs of the specified genome.  Each kmer will be associated with its list
      * of locations.
      *
      * @param genome	genome whose contig kmers are to be counted
