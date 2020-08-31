@@ -4,10 +4,6 @@
 package org.theseed.proteins.kmers.anno;
 
 import java.io.File;
-import java.io.IOException;
-
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.theseed.genome.Genome;
 import org.theseed.utils.ICommand;
@@ -50,65 +46,36 @@ public class GenomeKmerProcessor extends KmerProcessor implements ICommand {
     @Option(name = "-o", aliases = { "--output" }, usage = "output file name (if not STDOUT)")
     private File outFile;
 
-    /**
-     * Parse command-line options to specify the parameters of this object.
-     *
-     * @param args	an array of the command-line parameters and options
-     *
-     * @return TRUE if successful, FALSE if the parameters are invalid
-     */
-    public boolean parseCommand(String[] args) {
-        boolean retVal = false;
-        // Set the defaults.
+    @Override
+    public void setCommandDefaults() {
         this.inFile = null;
         this.outFile = null;
         this.help = false;
-        setDefaults();
-        // Parse the command line.
-        CmdLineParser parser = new CmdLineParser(this);
-        try {
-            parser.parseArgument(args);
-            if (this.help) {
-                parser.printUsage(System.err);
-            } else {
-                validateParms();
-                // Denote we can run.
-                retVal = true;
-            }
-        } catch (CmdLineException e) {
-            System.err.println(e.getMessage());
-            // For parameter errors, we display the command usage.
-            parser.printUsage(System.err);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return retVal;
     }
 
-    public void run() {
-        try {
-            log.info("Connecting to PATRIC.");
-            Genome newGenome;
-            if (this.inFile != null) {
-                log.info("Reading genome from {}.", this.inFile);
-                newGenome = new Genome(this.inFile);
-            } else {
-                log.info("Reading genome from standard input.");
-                newGenome = new Genome(System.in);
-            }
-            annotateGenome(newGenome);
-            // Write the result.
-            if (this.outFile != null) {
-                log.info("Writing genome to {}.", this.outFile);
-                newGenome.update(outFile);
-            } else {
-                log.info("Writing genome to standard output.");
-                newGenome.update(System.out);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
+    public void runCommand() throws Exception {
+        log.info("Connecting to PATRIC.");
+        Genome newGenome;
+        if (this.inFile != null) {
+            log.info("Reading genome from {}.", this.inFile);
+            newGenome = new Genome(this.inFile);
+        } else {
+            log.info("Reading genome from standard input.");
+            newGenome = new Genome(System.in);
         }
+        annotateGenome(newGenome);
+        // Write the result.
+        if (this.outFile != null) {
+            log.info("Writing genome to {}.", this.outFile);
+            newGenome.update(outFile);
+        } else {
+            log.info("Writing genome to standard output.");
+            newGenome.update(System.out);
+        }
+    }
+
+    @Override
+    protected void validateCommandParms() {
     }
 
 }

@@ -28,9 +28,7 @@ import org.theseed.p3api.P3Genome.Details;
 import org.theseed.proteins.DnaTranslator;
 import org.theseed.proteins.kmers.KmerFactory;
 import org.theseed.proteins.kmers.KmerReference;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.LoggerContext;
+import org.theseed.utils.BaseProcessor;
 
 /**
  * This is the base class for annotating a genome.  It provides methods for handling the common
@@ -39,7 +37,7 @@ import ch.qos.logback.classic.LoggerContext;
  * @author Bruce Parrello
  *
  */
-public class KmerProcessor {
+public abstract class KmerProcessor extends BaseProcessor {
 
     // FIELDS
 
@@ -59,12 +57,6 @@ public class KmerProcessor {
 
     // COMMAND LINE OPTIONS
 
-    /** help option */
-    @Option(name = "-h", aliases = { "--help" }, help = true)
-    protected boolean help;
-    /** debug-message flag */
-    @Option(name = "-v", aliases = { "--verbose", "--debug" }, usage = "show more detailed progress messages")
-    private boolean debug;
     /** minimum acceptable proposal strength */
     @Option(name = "-m", aliases = { "--minStrength", "--min" }, metaVar = "0.30",
             usage = "minimum acceptable proposal strength (0 to 1)")
@@ -109,7 +101,7 @@ public class KmerProcessor {
      * Verify that the command-line options are correct.
      * @throws IOException
      */
-    protected void validateParms() throws IOException {
+    protected boolean validateParms() throws IOException {
         // Verify the options.
         if (this.minStrength >= 1.0)
             throw new IllegalArgumentException("Minimum strength must be less than 1.");
@@ -124,13 +116,16 @@ public class KmerProcessor {
         // Connect to PATRIC.
         log.info("Connecting to PATRIC.");
         this.p3 = new Connection();
-        if (this.debug) {
-            // To get more progress messages, we set the log level in logback.
-            LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-            ch.qos.logback.classic.Logger logger = loggerContext.getLogger("org.theseed");
-            logger.setLevel(Level.toLevel("TRACE"));
-        }
+        validateCommandParms();
+        return true;
     }
+
+    /**
+     * Validate the subclass parameters.
+     *
+     * @throws IOException
+     */
+    protected abstract void validateCommandParms() throws IOException;
 
     /**
      * Set the default command-line options.
@@ -142,7 +137,13 @@ public class KmerProcessor {
         this.maxGenomes = 10;
         this.minEvidence = 10;
         this.kmerType = KmerFactory.Type.AGGRESSIVE;
+        setCommandDefaults();
     }
+
+    /**
+     * Set the subclass defaults.
+     */
+    protected abstract void setCommandDefaults();
 
     /**
      * Annotate a genome.
