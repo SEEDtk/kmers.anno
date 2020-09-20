@@ -13,7 +13,9 @@ import org.theseed.utils.BaseProcessor;
  * 	build		build a discriminating-kmer database for a specified list of roles
  * 	apply		apply a discriminating-kmer database to genomes to create a role-count file
  * 	merge		merge the testing set and the training set into a single file
- * 	functions	map functions between genomes annotated using an old system and newly-annotated genomes
+ * 	funMap		map functions between genomes annotated using an old system and newly-annotated genomes
+ *	funApply	apply a function mapping to one or more genomes
+ *	compare		compare functional assignments between new and old genomes
  */
 public class App
 {
@@ -40,7 +42,13 @@ public class App
         case "merge" :
             processor = new MergeFilesProcessor();
             break;
-        case "functions" :
+        case "funMap" :
+            processor = new FunctionCompareProcessor();
+            break;
+        case "funApply" :
+            processor = new FunctionApplyProcessor();
+            break;
+        case "compare" :
             processor = new GenomeCompareProcessor();
             break;
         default:
