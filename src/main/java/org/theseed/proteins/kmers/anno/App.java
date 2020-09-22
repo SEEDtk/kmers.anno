@@ -16,6 +16,7 @@ import org.theseed.utils.BaseProcessor;
  * 	funMap		map functions between genomes annotated using an old system and newly-annotated genomes
  *	funApply	apply a function mapping to one or more genomes
  *	compare		compare functional assignments between new and old genomes
+ *	subCompare	compare subsystems between two sets of genomes
  */
 public class App
 {

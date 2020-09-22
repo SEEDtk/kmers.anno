@@ -16,7 +16,7 @@ import org.theseed.proteins.FunctionMap;
  * @author Bruce Parrello
  *
  */
-public class CompareGenomes extends CompareORFs {
+public class CompareGenomes extends CompareORFs implements IGenomeMatcher {
 
     // FIELDS
     /** good counts */
@@ -78,6 +78,7 @@ public class CompareGenomes extends CompareORFs {
     /**
      * @return the nubmer of good matches
      */
+    @Override
     public int getGood() {
         return this.good;
     }
@@ -85,6 +86,7 @@ public class CompareGenomes extends CompareORFs {
     /**
      * @return the number of bad matches
      */
+    @Override
     public int getBad() {
         return this.bad;
     }

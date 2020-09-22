@@ -14,12 +14,14 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.theseed.genome.Genome;
 import org.theseed.genome.GenomeDirectory;
-import org.theseed.genome.compare.CompareGenomes;
-import org.theseed.genome.compare.CompareORFs;
+import org.theseed.genome.compare.CompareType;
+import org.theseed.genome.compare.IGenomeMatcher;
+import org.theseed.genome.compare.MatchGenomes;
 
 /**
  * This command performs a functional assignment comparison between identically-sequenced genomes.  A directory of reference genomes is specified
@@ -33,6 +35,7 @@ import org.theseed.genome.compare.CompareORFs;
  *
  * -h	display command-line usage
  * -v	display more detailed progress messages
+ * -t 	type of comparison (default FUNCTIONS)
  *
  * @author Bruce Parrello
  *
@@ -43,7 +46,7 @@ public class GenomeCompareProcessor extends BaseCompareProcessor {
     /** logging facility */
     protected static Logger log = LoggerFactory.getLogger(GenomeCompareProcessor.class);
     /** comparison engine */
-    private CompareGenomes compareEngine;
+    private IGenomeMatcher compareEngine;
     /** map of old-genome IDs to quality percentages, corresponding to the input directory positions */
     private Map<String, String[]> genomeMatchMap;
     /** number of good matches in each directory */
@@ -52,6 +55,10 @@ public class GenomeCompareProcessor extends BaseCompareProcessor {
     private int bad[];
 
     // COMMAND-LINE OPTIONS
+
+    /** type of comparison */
+    @Option(name = "-t", aliases = { "--type" }, usage = "type of comparison to perform")
+    private CompareType type;
 
     /** new-genome directories */
     @Argument(index = 1, metaVar = "newDir1 newDir2 ...", usage = "directory of new (modified) genomes", multiValued = true)
@@ -62,14 +69,14 @@ public class GenomeCompareProcessor extends BaseCompareProcessor {
     }
 
     @Override
-    protected CompareORFs getCompareEngine() {
-        return this.compareEngine;
+    protected MatchGenomes getCompareEngine() {
+        return (MatchGenomes) this.compareEngine;
     }
 
     @Override
     protected void validateSubParms() throws IOException, NoSuchAlgorithmException {
         // Create the comparison engine.
-        this.compareEngine = new CompareGenomes();
+        this.compareEngine = this.type.create();
         // Verify the new-genome directories.
         for (File newDir : this.newDirs) {
             if (! newDir.isDirectory())
@@ -94,7 +101,7 @@ public class GenomeCompareProcessor extends BaseCompareProcessor {
                 // Locate the old genome for this new one.
                 File oldFile = this.findOldGenome(genome);
                 if (oldFile == null)
-                    log.warn("Not reference match for {}-- skipping.", genome);
+                    log.warn("No reference match for {}-- skipping.", genome);
                 else {
                     Genome oldGenome = new Genome(oldFile);
                     // Note the old genome goes first in the check call, since we may end up updating the second

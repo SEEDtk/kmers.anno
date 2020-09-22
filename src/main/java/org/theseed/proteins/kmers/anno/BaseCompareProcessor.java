@@ -14,7 +14,7 @@ import org.kohsuke.args4j.Argument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.theseed.genome.Genome;
-import org.theseed.genome.compare.CompareORFs;
+import org.theseed.genome.compare.MatchGenomes;
 import org.theseed.sequence.MD5Hex;
 import org.theseed.utils.BaseProcessor;
 
@@ -72,7 +72,7 @@ public abstract class BaseCompareProcessor extends BaseProcessor {
     /**
      * @return the comparison engine for this processor
      */
-    protected abstract CompareORFs getCompareEngine();
+    protected abstract MatchGenomes getCompareEngine();
 
     /**
      * Validate the parameters for the subclass.
