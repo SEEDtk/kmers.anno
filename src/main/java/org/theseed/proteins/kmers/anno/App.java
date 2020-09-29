@@ -17,6 +17,7 @@ import org.theseed.utils.BaseProcessor;
  *	funApply	apply a function mapping to one or more genomes
  *	compare		compare functional assignments between new and old genomes
  *	subCompare	compare subsystems between two sets of genomes
+ *  seqCheck	verify that proteins in genomes are consistently annotated
  */
 public class App
 {
@@ -51,6 +52,9 @@ public class App
             break;
         case "compare" :
             processor = new GenomeCompareProcessor();
+            break;
+        case "seqCheck" :
+            processor = new SequenceCheckProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command \"" + command + "\".");
