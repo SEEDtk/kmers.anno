@@ -71,8 +71,5 @@ public class CompareSubsystems extends MatchGenomes implements IGenomeMatcher {
             retVal = (good * 100.0) / (good + bad);
         return retVal;
     }
-    // FIELDS
-    // TODO data members for CompareSubsystems
 
-    // TODO constructors and methods for CompareSubsystems
 }
