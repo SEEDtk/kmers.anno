@@ -3,6 +3,7 @@ package org.theseed.proteins.kmers.anno;
 
 import java.util.Arrays;
 
+import org.theseed.genomes.compare.GeneCopyProcessor;
 import org.theseed.utils.BaseProcessor;
 
 /**
@@ -18,6 +19,7 @@ import org.theseed.utils.BaseProcessor;
  *	compare		compare functional assignments between new and old genomes
  *	subCompare	compare subsystems between two sets of genomes
  *  seqCheck	verify that proteins in genomes are consistently annotated
+ *  genes		copy gene names from one genome to a close genome without gene names
  */
 public class App
 {
@@ -55,6 +57,9 @@ public class App
             break;
         case "seqCheck" :
             processor = new SequenceCheckProcessor();
+            break;
+        case "genes" :
+            processor = new GeneCopyProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command \"" + command + "\".");
