@@ -1,16 +1,17 @@
 /**
  *
  */
-package org.theseed.genomes.compare;
+package org.theseed.genome.compare;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -25,7 +26,7 @@ import org.theseed.utils.BaseProcessor;
 
 /**
  * This command uses kmers to compare identically-annotated features between close genomes.  If the features are
- * close enough, the gene name from the source feature is copied to the target feature.  The positional parameters
+ * close enough, the aliases from the source feature are copied to the target feature.  The positional parameters
  * are the file names of the two genome IDs and the file name for the output genome.
  *
  * The command-line options are as follows:
@@ -52,7 +53,7 @@ public class GeneCopyProcessor extends BaseProcessor {
     /** map of function IDs to features */
     private Map<String, List<Feature>> funFeatures;
     /** map of feature IDs to aliases */
-    private Map<String, String> aliasMap;
+    private Map<String, Collection<String>> aliasMap;
 
     // COMMAND-LINE OPTIONS
 
@@ -102,7 +103,7 @@ public class GeneCopyProcessor extends BaseProcessor {
         // Create the maps.
         this.funMap = new FunctionMap();
         this.funFeatures = new HashMap<String, List<Feature>>(4000);
-        this.aliasMap = new HashMap<String, String>(4000);
+        this.aliasMap = new HashMap<String, Collection<String>>(4000);
         return true;
     }
 
@@ -111,19 +112,18 @@ public class GeneCopyProcessor extends BaseProcessor {
         // Loop through the source, collecting features by role.
         log.info("Processing features in {}.", this.source);
         for (Feature feat : this.source.getPegs()) {
-            Optional<String> geneName = feat.getAliases().stream()
-                    .filter(x -> (! x.contains("|") && (x.length() == 3 || x.length() == 4))).findAny();
-            if (geneName.isPresent()) {
+            Collection<String> aliases = feat.getAliases();
+            if (aliases != null && aliases.size() > 0) {
                 // Associate the feature with its function.
                 String funDesc = feat.getPegFunction();
                 Function fun = this.funMap.findOrInsert(funDesc);
                 List<Feature> feats = this.funFeatures.computeIfAbsent(fun.getId(), x -> new ArrayList<Feature>(3));
                 feats.add(feat);
-                // Save the alias.
-                this.aliasMap.put(feat.getId(), geneName.get());
+                // Save the aliases.
+                this.aliasMap.put(feat.getId(), aliases);
             }
         }
-        log.info("{} features with names, {} functions found.", this.aliasMap.size(), this.funFeatures.size());
+        log.info("{} features with aliases, {} functions found.", this.aliasMap.size(), this.funFeatures.size());
         // Now loop through the target.
         int updates = 0;
         for (Feature feat : this.target.getPegs()) {
@@ -146,9 +146,11 @@ public class GeneCopyProcessor extends BaseProcessor {
                         }
                     }
                     if (found != null) {
-                        String alias = this.aliasMap.get(found.getId());
-                        log.debug("Feature {} with function \"{}\" has name {}.", feat.getId(), feat.getPegFunction(), alias);
-                        feat.addAlias(alias);
+                        Collection<String> aliases = this.aliasMap.get(found.getId());
+                        if (log.isDebugEnabled())
+                            log.debug("Feature {} with function \"{}\" has aliases {}.", feat.getId(), feat.getPegFunction(),
+                                    aliases.stream().collect(Collectors.joining(", ")));
+                        aliases.stream().forEach(x -> feat.addAlias(x));
                         updates++;
                     }
                 }
