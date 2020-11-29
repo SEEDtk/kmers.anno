@@ -23,6 +23,7 @@ import org.theseed.proteins.Function;
 import org.theseed.proteins.FunctionMap;
 import org.theseed.sequence.ProteinKmers;
 import org.theseed.utils.BaseProcessor;
+import org.theseed.utils.ParseFailureException;
 
 /**
  * This command uses kmers to compare identically-annotated features between close genomes.  If the features are
@@ -85,13 +86,13 @@ public class GeneCopyProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected boolean validateParms() throws IOException, ParseFailureException {
         // Validate the distance.
         if (this.maxDist < 0.0 || this.maxDist > 1.0)
-            throw new IllegalArgumentException("Distance must be between 0 and 1.");
+            throw new ParseFailureException("Distance must be between 0 and 1.");
         // Validate the kmer size.
         if (this.kmerSize < 2)
-            throw new IllegalArgumentException("Kmer size must be at least 2.");
+            throw new ParseFailureException("Kmer size must be at least 2.");
         ProteinKmers.setKmerSize(this.kmerSize);
         // Validate the genomes.
         if (! this.sourceFile.canRead())

@@ -29,6 +29,7 @@ import org.theseed.proteins.DnaTranslator;
 import org.theseed.proteins.kmers.KmerFactory;
 import org.theseed.proteins.kmers.KmerReference;
 import org.theseed.utils.BaseProcessor;
+import org.theseed.utils.ParseFailureException;
 
 /**
  * This is the base class for annotating a genome.  It provides methods for handling the common
@@ -99,16 +100,18 @@ public abstract class KmerProcessor extends BaseProcessor {
 
     /**
      * Verify that the command-line options are correct.
+     *
      * @throws IOException
+     * @throws ParseFailureException
      */
-    protected boolean validateParms() throws IOException {
+    protected boolean validateParms() throws IOException, ParseFailureException {
         // Verify the options.
         if (this.minStrength >= 1.0)
-            throw new IllegalArgumentException("Minimum strength must be less than 1.");
+            throw new ParseFailureException("Minimum strength must be less than 1.");
         if (this.maxFuzz <= 1.0)
-            throw new IllegalArgumentException("Max length factor must be greater than 1.");
+            throw new ParseFailureException("Max length factor must be greater than 1.");
         if (this.minFuzz > 1.0)
-            throw new IllegalArgumentException("Min length factor must be less than or equal to 1.");
+            throw new ParseFailureException("Min length factor must be less than or equal to 1.");
         if (this.cache != null && ! this.cache.isDirectory())
             throw new FileNotFoundException("Genome cache is not a directory.");
         // Create the kmer factory.

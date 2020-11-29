@@ -22,6 +22,7 @@ import org.theseed.proteins.kmers.KmerReference;
 import org.theseed.reports.ApplyKmerReporter;
 import org.theseed.sequence.ProteinKmers;
 import org.theseed.utils.BaseProcessor;
+import org.theseed.utils.ParseFailureException;
 
 /**
  * This command applies a discriminating-kmer database to one or more genomes to count the occurrences of interesting roles.
@@ -79,7 +80,7 @@ public class ApplyKmerProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected boolean validateParms() throws IOException, ParseFailureException {
         // Verify the input directory.
         if (! this.inDir.isDirectory())
             throw new FileNotFoundException("Input directory " + this.inDir + " not found or invalid.");
@@ -88,7 +89,7 @@ public class ApplyKmerProcessor extends BaseProcessor {
             throw new FileNotFoundException("Kmer database file " + this.kmerDbFile + " not found or unreadable.");
         // Verify the minimum number of hits.
         if (this.minHits < 1)
-            throw new IllegalArgumentException("Min-hits must be positive.");
+            throw new ParseFailureException("Min-hits must be positive.");
         // Initialize the reporting.
         this.reporter = this.outputType.create(System.out);
         if (! this.goodRoleFile.canRead())
