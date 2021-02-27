@@ -180,7 +180,7 @@ public class FunctionApplyProcessor extends BaseProcessor {
             // Write the genome to the output.
             File outFile = new File(this.outDir, genome.getId() + ".gto");
             log.info("Saving genome to {}.", outFile);
-            genome.update(outFile);
+            genome.save(outFile);
         }
         // All done.  Write the statistics.
         log.info("All done.  {} genomes processed, {} features analyzed, {} updated.", genomesIn, fInTotal, fChangedTotal);

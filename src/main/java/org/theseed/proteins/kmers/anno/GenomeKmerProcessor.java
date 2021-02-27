@@ -67,10 +67,10 @@ public class GenomeKmerProcessor extends KmerProcessor implements ICommand {
         // Write the result.
         if (this.outFile != null) {
             log.info("Writing genome to {}.", this.outFile);
-            newGenome.update(outFile);
+            newGenome.save(outFile);
         } else {
             log.info("Writing genome to standard output.");
-            newGenome.update(System.out);
+            newGenome.save(System.out);
         }
     }
 

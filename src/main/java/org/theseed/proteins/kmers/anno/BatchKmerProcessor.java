@@ -70,7 +70,7 @@ public class BatchKmerProcessor extends KmerProcessor implements ICommand {
                 this.annotateGenome(genome);
                 // Write it to the output.
                 log.info("Writing genome to {}.", outFile);
-                genome.update(outFile);
+                genome.save(outFile);
                 gCount++;
             }
         }

@@ -159,7 +159,7 @@ public class GeneCopyProcessor extends BaseProcessor {
         }
         // Write out the target.
         log.info("Writing genome with {} updates to {}.", updates, this.outputFile);
-        this.target.update(this.outputFile);
+        this.target.save(this.outputFile);
     }
 
 }
