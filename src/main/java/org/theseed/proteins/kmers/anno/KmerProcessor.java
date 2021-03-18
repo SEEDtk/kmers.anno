@@ -178,7 +178,7 @@ public abstract class KmerProcessor extends BaseProcessor {
             CloseGenome closeGenome = iter.next();
             log.info("Retrieving close genome #{} {}: {}.", iGenome,
                     closeGenome.getGenomeId(), closeGenome.getGenomeName());
-            Genome oldGenome = P3Genome.Load(p3, closeGenome.getGenomeId(), Details.PROTEINS, this.cache);
+            Genome oldGenome = P3Genome.load(p3, closeGenome.getGenomeId(), Details.PROTEINS, this.cache);
             if (oldGenome == null) {
                 log.warn("Genome {} not found-- skipping.");
             } else {
