@@ -22,7 +22,7 @@ import org.theseed.locations.Location;
 import org.theseed.locations.PegProposal;
 import org.theseed.locations.PegProposalList;
 import org.theseed.locations.SortedLocationList;
-import org.theseed.p3api.Connection;
+import org.theseed.p3api.P3Connection;
 import org.theseed.p3api.P3Genome;
 import org.theseed.p3api.P3Genome.Details;
 import org.theseed.proteins.DnaTranslator;
@@ -46,7 +46,7 @@ public abstract class KmerProcessor extends BaseProcessor {
     protected static Logger log = LoggerFactory.getLogger(GenomeKmerProcessor.class);
 
     /** connection to PATRIC */
-    private Connection p3;
+    private P3Connection p3;
     /** list of locations for each feature, separated vby frame */
     private FramedLocationLists framer;
     /** number of pegs created */
@@ -118,7 +118,7 @@ public abstract class KmerProcessor extends BaseProcessor {
         this.kmerFactory = KmerFactory.create(kmerType);
         // Connect to PATRIC.
         log.info("Connecting to PATRIC.");
-        this.p3 = new Connection();
+        this.p3 = new P3Connection();
         validateCommandParms();
         return true;
     }
