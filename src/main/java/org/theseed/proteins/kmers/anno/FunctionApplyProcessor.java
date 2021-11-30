@@ -88,7 +88,7 @@ public class FunctionApplyProcessor extends BaseProcessor {
         // Validate the projector file.
         if (this.projectorFile != null) {
             log.info("Loading subsystem projector from {}.", this.projectorFile);
-            this.projector = SubsystemProjector.Load(this.projectorFile);
+            this.projector = SubsystemProjector.load(this.projectorFile);
         }
         // Now set up the output directory.
         if (this.outDir.exists()) {
