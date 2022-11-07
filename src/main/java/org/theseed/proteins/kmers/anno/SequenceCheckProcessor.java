@@ -3,7 +3,6 @@
  */
 package org.theseed.proteins.kmers.anno;
 
-import java.util.List;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -22,7 +21,6 @@ import org.theseed.genome.Genome;
 import org.theseed.genome.GenomeDirectory;
 import org.theseed.proteins.Function;
 import org.theseed.proteins.FunctionMap;
-import org.theseed.proteins.Role;
 import org.theseed.proteins.RoleMap;
 import org.theseed.sequence.MD5Hex;
 import org.theseed.utils.BaseProcessor;
@@ -126,8 +124,8 @@ public class SequenceCheckProcessor extends BaseProcessor {
                     // Here we have inconsistent annotation.
                     badCount++;
                     for (Feature feat : flist) {
-                        List<Role> roles = feat.getUsefulRoles(this.roleMap);
-                        String iFlag = (roles.size() > 0 ? "*" : "");
+                        boolean interest = feat.isInteresting(this.roleMap);
+                        String iFlag = (interest ? "*" : "");
                         System.out.format("%8d\t%s\t%s\t%s%n", badCount, feat.getId(), feat.getPegFunction(), iFlag);
                     }
                     System.out.println();
