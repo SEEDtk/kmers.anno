@@ -14,6 +14,8 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
+import org.theseed.basic.ParseFailureException;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
 import org.theseed.genome.GenomeDirectory;
@@ -21,8 +23,6 @@ import org.theseed.io.TabbedLineReader;
 import org.theseed.proteins.kmers.KmerReference;
 import org.theseed.reports.ApplyKmerReporter;
 import org.theseed.sequence.ProteinKmers;
-import org.theseed.utils.BaseProcessor;
-import org.theseed.utils.ParseFailureException;
 
 /**
  * This command applies a discriminating-kmer database to one or more genomes to count the occurrences of interesting roles.

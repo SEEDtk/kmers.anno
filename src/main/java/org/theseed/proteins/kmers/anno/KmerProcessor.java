@@ -13,6 +13,8 @@ import org.apache.commons.codec.binary.StringUtils;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
+import org.theseed.basic.ParseFailureException;
 import org.theseed.counters.CountMap;
 import org.theseed.genome.CloseGenome;
 import org.theseed.genome.Feature;
@@ -28,8 +30,6 @@ import org.theseed.p3api.P3Genome.Details;
 import org.theseed.proteins.DnaTranslator;
 import org.theseed.proteins.kmers.KmerFactory;
 import org.theseed.proteins.kmers.KmerReference;
-import org.theseed.utils.BaseProcessor;
-import org.theseed.utils.ParseFailureException;
 
 /**
  * This is the base class for annotating a genome.  It provides methods for handling the common

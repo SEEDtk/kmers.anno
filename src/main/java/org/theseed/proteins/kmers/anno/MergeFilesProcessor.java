@@ -15,8 +15,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.Argument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
 import org.theseed.io.LineReader;
-import org.theseed.utils.BaseProcessor;
 
 /**
  * This command is run after the "build" and "apply" commands.  At this point, we have a testing set file and a training set file.

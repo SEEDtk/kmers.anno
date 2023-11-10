@@ -14,6 +14,7 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
 import org.theseed.genome.GenomeDirectory;
@@ -21,7 +22,6 @@ import org.theseed.io.TabbedLineReader;
 import org.theseed.proteins.Function;
 import org.theseed.proteins.FunctionMap;
 import org.theseed.subsystems.SubsystemProjector;
-import org.theseed.utils.BaseProcessor;
 
 /**
  * This command reads in a function-mapping file produced by the "core.utils proteins" command and applies the good function mappings

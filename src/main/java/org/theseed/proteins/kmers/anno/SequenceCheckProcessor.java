@@ -15,6 +15,7 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
 import org.theseed.counters.CountMap;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
@@ -23,7 +24,6 @@ import org.theseed.proteins.Function;
 import org.theseed.proteins.FunctionMap;
 import org.theseed.proteins.RoleMap;
 import org.theseed.sequence.MD5Hex;
-import org.theseed.utils.BaseProcessor;
 
 /**
  * This command determines whether or not proteins in a set of genomes are consistently annotated.  Each genome's protein features will

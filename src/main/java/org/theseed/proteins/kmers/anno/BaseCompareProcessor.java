@@ -13,10 +13,10 @@ import java.util.Map;
 import org.kohsuke.args4j.Argument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
 import org.theseed.genome.Genome;
 import org.theseed.genome.compare.MatchGenomes;
 import org.theseed.sequence.MD5Hex;
-import org.theseed.utils.BaseProcessor;
 
 /**
  * This is the base class for genome ORF-comparison processors.  The subclass determines the type of comparison engine

@@ -3,8 +3,8 @@ package org.theseed.proteins.kmers.anno;
 
 import java.util.Arrays;
 
+import org.theseed.basic.BaseProcessor;
 import org.theseed.genome.compare.GeneCopyProcessor;
-import org.theseed.utils.BaseProcessor;
 
 /**
  * Valid commands are

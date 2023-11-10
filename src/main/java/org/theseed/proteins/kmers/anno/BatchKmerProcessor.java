@@ -4,9 +4,9 @@ import java.io.File;
 import java.io.IOException;
 
 import org.kohsuke.args4j.Argument;
+import org.theseed.basic.ICommand;
 import org.theseed.genome.Genome;
 import org.theseed.io.TabbedLineReader;
-import org.theseed.utils.ICommand;
 
 /**
  * This program attempts to project proteins from close genomes to genomes that need re-annotation.  For each one,

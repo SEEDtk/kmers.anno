@@ -5,8 +5,8 @@ package org.theseed.proteins.kmers.anno;
 
 import java.io.File;
 import org.kohsuke.args4j.Option;
+import org.theseed.basic.ICommand;
 import org.theseed.genome.Genome;
-import org.theseed.utils.ICommand;
 
 /**
  * This program attempts to project proteins from close genomes to a new genome.  The new genome should have its taxonomy
