@@ -20,6 +20,7 @@ import org.theseed.genome.compare.GeneCopyProcessor;
  *	subCompare	compare subsystems between two sets of genomes
  *  seqCheck	verify that proteins in genomes are consistently annotated
  *  genes		copy gene names from one genome to a close genome without gene names
+ *  hashAnno	use a protein kmer hash to annotate features in a PATRIC dump directory
  */
 public class App
 {
@@ -60,6 +61,9 @@ public class App
             break;
         case "genes" :
             processor = new GeneCopyProcessor();
+            break;
+        case "hashAnno" :
+            processor = new HashAnnotationProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command \"" + command + "\".");
