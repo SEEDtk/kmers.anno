@@ -147,7 +147,8 @@ public class HashAnnotationProcessor extends BaseInputProcessor {
                     // Here the batch is full, so load it.
                     this.loadBatch(batch);
                     batch.clear();
-                    log.info("{} lines read, {} proteins kept.", lineCount, protCount);
+                    log.info("{} lines read, {} proteins kept, {} kmers in table.", lineCount, protCount,
+                            this.annoMap.getKmerCount());
                 }
                 batch.add(new AbstractMap.SimpleEntry<String, String>(prot, anno));
                 protCount++;
