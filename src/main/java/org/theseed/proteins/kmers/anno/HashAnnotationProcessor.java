@@ -90,7 +90,7 @@ public class HashAnnotationProcessor extends BaseInputProcessor {
     protected void setReaderDefaults() {
         this.kmerSize = 8;
         this.minScore = 0.005;
-        this.batchSize = 2000;
+        this.batchSize = 5000;
         this.protExpected = 15000;
     }
 
