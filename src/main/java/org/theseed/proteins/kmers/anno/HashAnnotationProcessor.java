@@ -7,6 +7,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.theseed.utils.BaseInputProcessor;
 import org.apache.commons.lang3.StringUtils;
@@ -40,8 +44,10 @@ import org.theseed.proteins.kmer.hash.ProteinKmerHashMap;
  * -v	display more frequent log messages
  * -i	input file containing proteins and annotations (if not STDIN)
  * -K	protein kmer size
+ * -b	batch size for load
  *
  * --min	minimum similarity score for an annotation to be acceptable
+ * --num	estimated number of proteins being input
  *
  */
 public class HashAnnotationProcessor extends BaseInputProcessor {
@@ -64,9 +70,17 @@ public class HashAnnotationProcessor extends BaseInputProcessor {
     @Option(name = "--kmer", aliases = { "-K" }, metaVar = "10", usage = "protein kmer size")
     private int kmerSize;
 
+    /** batch size for load */
+    @Option(name = "--batch", aliases = { "-b" }, metaVar = "100", usage = "batch size for hash loading")
+    private int batchSize;
+
     /** minimum similarity score for an annotation */
     @Option(name = "--min", metaVar = "0.1", usage = "minimum acceptable similarity score for annotation")
     private double minScore;
+
+    /** estimated number of proteins being hashed */
+    @Option(name = "--num", metaVar = "1000", usage = "estimated number of proteins being put into the hash")
+    private int protExpected;
 
     /** input PATRIC genome dump directory */
     @Argument(index = 0, metaVar = "inDir", usage = "input genome dump directory", required = true)
@@ -76,6 +90,8 @@ public class HashAnnotationProcessor extends BaseInputProcessor {
     protected void setReaderDefaults() {
         this.kmerSize = 8;
         this.minScore = 0.005;
+        this.batchSize = 2000;
+        this.protExpected = 15000;
     }
 
     @Override
@@ -84,6 +100,12 @@ public class HashAnnotationProcessor extends BaseInputProcessor {
         if (this.kmerSize < 2)
             throw new ParseFailureException("Kmer Size must be at least 2.");
         log.info("Kmer size is {}.", this.kmerSize);
+        // Insure the batch size is valid.
+        if (this.batchSize < 1)
+            throw new ParseFailureException("Batch size must be positive.");
+        // Insure the estimated protein count is valid.
+        if (this.protExpected < 10)
+            throw new ParseFailureException("Expected protein count must be at least 10.");
         // Insure the min score is valid.
         if (this.minScore < 0.0 || this.minScore >= 1.0)
             throw new ParseFailureException("Minimum similarity score must be between 0 and 1.");
@@ -105,12 +127,14 @@ public class HashAnnotationProcessor extends BaseInputProcessor {
     @Override
     protected void runReader(TabbedLineReader reader) throws Exception {
         log.info("Creating kmer hash table.");
-        this.annoMap = new ProteinKmerHashMap<String>(this.kmerSize);
-        // Loop through the input, storing the proteins.
+        this.annoMap = new ProteinKmerHashMap<String>(this.kmerSize, this.protExpected);
+        // Initialize the load counters.
         int protCount = 0;
         int skipCount = 0;
         int lineCount = 0;
-        long lastMsg = System.currentTimeMillis();
+        // Create the load batch.
+        var batch = new ArrayList<Map.Entry<String, String>>(this.batchSize);
+        // Loop through the input, storing the proteins.
         for (var line : reader) {
             lineCount++;
             String prot = line.get(this.protIdx);
@@ -119,14 +143,19 @@ public class HashAnnotationProcessor extends BaseInputProcessor {
                     || prot.length() < this.kmerSize || anno.contains("hypothetical"))
                 skipCount++;
             else {
-                this.annoMap.addProtein(prot, anno);
+                if (batch.size() >= this.batchSize) {
+                    // Here the batch is full, so load it.
+                    this.loadBatch(batch);
+                    batch.clear();
+                    log.info("{} lines read, {} proteins kept.", lineCount, protCount);
+                }
+                batch.add(new AbstractMap.SimpleEntry<String, String>(prot, anno));
                 protCount++;
             }
-            if (log.isInfoEnabled() && System.currentTimeMillis() - lastMsg >= 10000) {
-                log.info("{} lines read. {} proteins kept.", lineCount, protCount);
-                lastMsg = System.currentTimeMillis();
-            }
         }
+        // Process the residual batch.
+        if (batch.size() > 0)
+            this.loadBatch(batch);
         log.info("{} lines read.  {} proteins kept, {} skipped. {} kmers in table.", lineCount,
                 protCount, skipCount, this.annoMap.getKmerCount());
         // Now we loop through the genome directories.
@@ -135,7 +164,7 @@ public class HashAnnotationProcessor extends BaseInputProcessor {
         int featCount = 0;
         protCount = 0;
         skipCount = 0;
-        lastMsg = System.currentTimeMillis();
+        long lastMsg = System.currentTimeMillis();
         log.info("Processing {} genome directories.", this.gDirs.length);
         for (File gDir : this.gDirs) {
             String genomeId = gDir.getName();
@@ -181,6 +210,10 @@ public class HashAnnotationProcessor extends BaseInputProcessor {
         }
         log.info("{} features processed, [} skipped, {} proteins, {} new annotations found.",
                 featCount, skipCount, protCount, foundCount);
+    }
+
+    private void loadBatch(ArrayList<Entry<String, String>> batch) {
+        batch.parallelStream().forEach(x -> this.annoMap.addProtein(x.getKey(), x.getValue()));
     }
 
 }
