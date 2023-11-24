@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -22,6 +24,7 @@ import org.theseed.genome.Genome;
 import org.theseed.genome.iterator.GenomeSource;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.proteins.kmer.hash.GenomeProteinKmers;
+import org.theseed.proteins.kmer.hash.Prototype;
 import org.theseed.utils.BaseMultiReportProcessor;
 
 /**
@@ -46,7 +49,7 @@ import org.theseed.utils.BaseMultiReportProcessor;
  * -D	output directory for annotation files (default "Annotations" in the current directory)
  * -t	type of genome source (default DIR)
  *
- * --minSim		minimum similarity score for an annotation to be acceptable (default 0.005)
+ * --minSim		minimum similarity score for an annotation to be acceptable (default 0.0125)
  * --minLen		minimum acceptable protein length (default 50)
  *
  */
@@ -55,10 +58,6 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
     // FIELDS
     /** logging facility */
     protected static Logger log = LoggerFactory.getLogger(HashAnnotationProcessor.class);
-    /** input column index for protein strings */
-    private int protIdx;
-    /** input column index for annotation strings */
-    private int annoIdx;
     /** genomes to process */
     private GenomeSource genomes;
     /** number of genomes processed */
@@ -73,6 +72,8 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
     private int defaultCount;
     /** number of annotations changed */
     private int newAnnoCount;
+    /** list of annotation records */
+    private List<Prototype> annoList;
 
     // COMMAND-LINE OPTIONS
 
@@ -103,7 +104,7 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
     @Override
     protected void setMultiReportDefaults() {
         this.kmerSize = 8;
-        this.minScore = 0.005;
+        this.minScore = 0.0125;
         this.sourceType = GenomeSource.Type.DIR;
         this.minProtLen = 50;
     }
@@ -128,12 +129,24 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
         // Insure the minimum protein length is valid.
         if (this.minProtLen < this.kmerSize)
             throw new FileNotFoundException("Minimum protein length cannot be less than kmer size.");
-        // Validate the role annotation file.  We make sure we can read it and that it has the necessary fields.
+        // Read in the role annotation file.
         if (! this.annoFile.canRead())
             throw new FileNotFoundException("Role annotation file " + this.annoFile + " is not found or unreadable.");
+        // Estimate the list size.
+        int annoSize = (int) (this.annoFile.length() / 390);
+        this.annoList = new ArrayList<Prototype>(annoSize);
+        log.info("Reading annotation data from {}.  {} lines estimated.", this.annoFile, annoSize);
         try (TabbedLineReader annoStream = new TabbedLineReader(this.annoFile)) {
-            this.annoIdx = annoStream.findField("annotation");
-            this.protIdx = annoStream.findField("protein");
+            int annoIdx = annoStream.findField("annotation");
+            int protIdx = annoStream.findField("protein");
+            for (var line : annoStream) {
+                String anno = line.get(annoIdx);
+                String prot = line.get(protIdx);
+                // Insure this is a useful annotation.
+                if (! StringUtils.isBlank(anno) && prot.length() >= this.minProtLen)
+                    this.annoList.add(new Prototype(prot, anno));
+            }
+            log.info("{} annotations found.", this.annoList.size());
         }
         // Validate the genome source.
         if (! this.inDir.exists())
@@ -145,6 +158,8 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
 
     @Override
     protected void runMultiReports() throws Exception {
+        // Load the annotation list into memory.
+
         // Now we loop through the genome directories.
         Set<String> genomeIds = this.genomes.getIDs();
         genomeIds.parallelStream().forEach(x -> this.processGenome(x));
@@ -188,69 +203,64 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
             log.info("{} features processed, {} skipped, {} proteins, {} kmers in {}.", fCount, sCount, pCount,
                     genomeKmers.getKmerCount(), genome);
             // Now we need to annotate the features.  We do this by reading through the annotation file.
-            try (TabbedLineReader annoStream = new TabbedLineReader(this.annoFile)) {
-                int closeCount = 0;
-                int lineCount = 0;
-                long lastMsg = System.currentTimeMillis();
-                long start = lastMsg;
-                // Loop through the annotation stream, performing annotations.
-                for (var line : annoStream) {
-                    String prot = line.get(this.protIdx);
-                    String anno = line.get(this.annoIdx);
-                    lineCount++;
-                    // Insure this is a useful annotation.
-                    if (! StringUtils.isBlank(anno) && prot.length() >= this.minProtLen) {
-                        int count = genomeKmers.processProposal(prot, anno);
-                        closeCount += count;
-                        if (log.isInfoEnabled() && System.currentTimeMillis() - lastMsg >= 5000) {
-                            lastMsg = System.currentTimeMillis();
-                            double rate = lineCount * 1000.0 / (lastMsg - start);
-                            log.info("{} annotation lines read, {} matches found, {} lines/second for {}.", lineCount, closeCount,
-                                    rate, genome);
-                        }
-                    }
+            int closeCount = 0;
+            int lineCount = 0;
+            long lastMsg = System.currentTimeMillis();
+            long start = lastMsg;
+            // Loop through the annotation stream, performing annotations.
+            for (Prototype line : this.annoList) {
+                String prot = line.getProtein();
+                String anno = line.getAnnotation();
+                lineCount++;
+                int count = genomeKmers.processProposal(prot, anno);
+                closeCount += count;
+                if (log.isInfoEnabled() && System.currentTimeMillis() - lastMsg >= 5000) {
+                    lastMsg = System.currentTimeMillis();
+                    double rate = lineCount * 1000.0 / (lastMsg - start);
+                    log.info("{} annotation lines read, {} matches found, {} lines/second for {}.", lineCount, closeCount,
+                            rate, genome);
                 }
-                // Write the output header.
-                writer.println("fid\tscore\tnew_annotation\told_annotation");
-                // Now unspool the features to the output.  Note that we will leave the score blank if we
-                // have a non-protein feature.
-                int cCount = 0;
-                int naCount = 0;
-                int dCount = 0;
-                for (Feature feat : genome.getFeatures()) {
-                    String md5 = feat.getMD5();
-                    String oldAnnotation = feat.getPegFunction();
-                    GenomeProteinKmers.Proposal proposal = null;
-                    if (! StringUtils.isBlank(md5))
-                        proposal = genomeKmers.getProposal(md5);
-                    // At this point, a NULL proposal means the feature was not annotated.
-                    if (proposal == null)
-                        writer.println(feat.getId() + "\t\t" + oldAnnotation + "\t" + oldAnnotation);
-                    else {
-                        // Here we have a successful annotation.  Determine the type (default, confirm, new).
-                        double score = proposal.getSim();
-                        String newAnnotation = proposal.getAnnotation();
-                        if (score == 0.0)
-                            dCount++;
-                        else if (oldAnnotation.contentEquals(newAnnotation))
-                            cCount++;
-                        else
-                            naCount++;
-                        writer.println(feat.getId() + "\t" + String.valueOf(score) + "\t" + newAnnotation
-                                + "\t" + oldAnnotation);
-                    }
+            }
+            // Write the output header.
+            writer.println("fid\tscore\tnew_annotation\told_annotation");
+            // Now unspool the features to the output.  Note that we will leave the score blank if we
+            // have a non-protein feature.
+            int cCount = 0;
+            int naCount = 0;
+            int dCount = 0;
+            for (Feature feat : genome.getFeatures()) {
+                String md5 = feat.getMD5();
+                String oldAnnotation = feat.getPegFunction();
+                GenomeProteinKmers.Proposal proposal = null;
+                if (! StringUtils.isBlank(md5))
+                    proposal = genomeKmers.getProposal(md5);
+                // At this point, a NULL proposal means the feature was not annotated.
+                if (proposal == null)
+                    writer.println(feat.getId() + "\t\t" + oldAnnotation + "\t" + oldAnnotation);
+                else {
+                    // Here we have a successful annotation.  Determine the type (default, confirm, new).
+                    double score = proposal.getSim();
+                    String newAnnotation = proposal.getAnnotation();
+                    if (score == 0.0)
+                        dCount++;
+                    else if (oldAnnotation.contentEquals(newAnnotation))
+                        cCount++;
+                    else
+                        naCount++;
+                    writer.println(feat.getId() + "\t" + String.valueOf(score) + "\t" + newAnnotation
+                            + "\t" + oldAnnotation);
                 }
-                if (log.isInfoEnabled()) {
-                    Duration time = Duration.ofMillis(System.currentTimeMillis() - genomeStart);
-                    log.info("{} default annotations, {} confirmed annotations, {} new annotations in {}.",
-                            dCount, cCount, naCount, genome);
-                    log.info("{} to annotation {}.", time, genome);
-                }
-                synchronized (this) {
-                    confirmCount += cCount;
-                    defaultCount += dCount;
-                    newAnnoCount += naCount;
-                }
+            }
+            if (log.isInfoEnabled()) {
+                Duration time = Duration.ofMillis(System.currentTimeMillis() - genomeStart);
+                log.info("{} default annotations, {} confirmed annotations, {} new annotations in {}.",
+                        dCount, cCount, naCount, genome);
+                log.info("{} to annotate {}.", time, genome);
+            }
+            synchronized (this) {
+                confirmCount += cCount;
+                defaultCount += dCount;
+                newAnnoCount += naCount;
             }
         } catch (IOException e) {
             // Convert the IO exception to allow use in streams.
