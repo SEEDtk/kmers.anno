@@ -31,7 +31,8 @@ import org.theseed.utils.BaseMultiReportProcessor;
  * This sub-command uses protein kmer hashing to annotate GTOs.  The GTOs should be at least
  * PROTEIN detail level:  DNA is not required.  For each GTO, a file named "XXXXXX.anno.tbl"
  * will be output, where "XXXXXX" is the genome ID. If no annotation is possible, the old annotation
- * is retained.
+ * is retained.  A file containing the annotations that have changed by the process will be
+ * output to "changes.tbl" in the output directory.
  *
  * The annotation data is in a role annotation file.  This is a tab-delimited file with headers, and
  * the proteins are in a column named "protein" and the annotations in a column named "annotation".
@@ -74,6 +75,10 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
     private int newAnnoCount;
     /** list of annotation records */
     private List<Prototype> annoList;
+    /** output writer for changed annotations */
+    private PrintWriter changeWriter;
+    /** header line for output files */
+    private static final String OUTPUT_HEADER = "fid\tscore\tnew_annotation\told_annotation";
 
     // COMMAND-LINE OPTIONS
 
@@ -87,7 +92,7 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
 
     /** minimum length for a usable annotation protein */
     @Option(name = "--minLen", metaVar = "200", usage = "minimum acceptable length for an annotation protein")
-    private double minProtLen;
+    private int minProtLen;
 
     /** type of genome source */
     @Option(name = "--source", aliases = { "-t" }, usage = "type of genome source")
@@ -158,16 +163,23 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
 
     @Override
     protected void runMultiReports() throws Exception {
-        // Load the annotation list into memory.
-
-        // Now we loop through the genome directories.
-        Set<String> genomeIds = this.genomes.getIDs();
-        genomeIds.parallelStream().forEach(x -> this.processGenome(x));
-        log.info("{} total proteins out of {} features processed for {} genomes.", this.protCount, this.featCount, this.gCount);
-        log.info("{} annotations confirmed, {} updated, {} defaulted.", this.confirmCount, this.newAnnoCount, this.defaultCount);
+        // Set up the changes file.
+        try (PrintWriter writer = this.openReport("changes.tbl")) {
+            writer.println(OUTPUT_HEADER);
+            // The subtasks need access to the changes writer.
+            this.changeWriter = writer;
+            // Now we loop through the genome directories.
+            Set<String> genomeIds = this.genomes.getIDs();
+            genomeIds.parallelStream().forEach(x -> this.processGenome(x));
+            log.info("{} total proteins out of {} features processed for {} genomes.", this.protCount, this.featCount, this.gCount);
+            log.info("{} annotations confirmed, {} updated, {} defaulted.", this.confirmCount, this.newAnnoCount, this.defaultCount);
+        }
     }
     /**
-     * @param genomeId
+     * Process the annotations for a single genome.
+     *
+     * @param genomeId		ID of the genome to process
+     *
      * @throws IOException
      */
     private void processGenome(String genomeId) {
@@ -175,7 +187,7 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
         synchronized (this) {
             this.gCount++;
         }
-        log.info("Processing genome {} of {}:  {}.", gCount, genomes.size(), genome);
+        log.info("Processing genome {} of {}:  {}.", this.gCount, genomes.size(), genome);
         try (PrintWriter writer = this.openReport(genomeId + ".anno.tbl")) {
             long genomeStart = System.currentTimeMillis();
             // Loop through the genome features, filling the kmer hash.
@@ -196,18 +208,16 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
                     genomeKmers.addProtein(fid, prot, annotation);
                 }
             }
-            synchronized (this) {
-                this.featCount += fCount;
-                this.protCount += pCount;
-            }
             log.info("{} features processed, {} skipped, {} proteins, {} kmers in {}.", fCount, sCount, pCount,
                     genomeKmers.getKmerCount(), genome);
-            // Now we need to annotate the features.  We do this by reading through the annotation file.
+            // Create a save list for the changes.
+            List<String> changeLines = new ArrayList<String>(1000);
+            // Set up some counters and an annotation timer.
             int closeCount = 0;
             int lineCount = 0;
             long lastMsg = System.currentTimeMillis();
             long start = lastMsg;
-            // Loop through the annotation stream, performing annotations.
+            // Now we need to annotate the features.  We do this by reading through the annotation file.
             for (Prototype line : this.annoList) {
                 String prot = line.getProtein();
                 String anno = line.getAnnotation();
@@ -222,45 +232,56 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
                 }
             }
             // Write the output header.
-            writer.println("fid\tscore\tnew_annotation\told_annotation");
+            writer.println(OUTPUT_HEADER);
             // Now unspool the features to the output.  Note that we will leave the score blank if we
             // have a non-protein feature.
             int cCount = 0;
-            int naCount = 0;
             int dCount = 0;
             for (Feature feat : genome.getFeatures()) {
                 String md5 = feat.getMD5();
                 String oldAnnotation = feat.getPegFunction();
+                String fid = feat.getId();
                 GenomeProteinKmers.Proposal proposal = null;
                 if (! StringUtils.isBlank(md5))
                     proposal = genomeKmers.getProposal(md5);
                 // At this point, a NULL proposal means the feature was not annotated.
                 if (proposal == null)
-                    writer.println(feat.getId() + "\t\t" + oldAnnotation + "\t" + oldAnnotation);
+                    writer.println(fid + "\t\t" + oldAnnotation + "\t" + oldAnnotation);
                 else {
                     // Here we have a successful annotation.  Determine the type (default, confirm, new).
                     double score = proposal.getSim();
                     String newAnnotation = proposal.getAnnotation();
+                    // Compute the output line.
+                    String outLine = StringUtils.joinWith("\t", fid, String.valueOf(score),
+                            newAnnotation, oldAnnotation);
+                    writer.println(outLine);
+                    // Track the annotation type-- default, confirmed, new.
                     if (score == 0.0)
                         dCount++;
                     else if (oldAnnotation.contentEquals(newAnnotation))
                         cCount++;
-                    else
-                        naCount++;
-                    writer.println(feat.getId() + "\t" + String.valueOf(score) + "\t" + newAnnotation
-                            + "\t" + oldAnnotation);
+                    else {
+                        // Here we have a new annotation, so we need to save it.
+                        changeLines.add(outLine);
+                    }
                 }
             }
             if (log.isInfoEnabled()) {
                 Duration time = Duration.ofMillis(System.currentTimeMillis() - genomeStart);
                 log.info("{} default annotations, {} confirmed annotations, {} new annotations in {}.",
-                        dCount, cCount, naCount, genome);
+                        dCount, cCount, changeLines.size(), genome);
                 log.info("{} to annotate {}.", time, genome);
             }
             synchronized (this) {
-                confirmCount += cCount;
-                defaultCount += dCount;
-                newAnnoCount += naCount;
+                this.featCount += fCount;
+                this.protCount += pCount;
+                this.confirmCount += cCount;
+                this.defaultCount += dCount;
+                this.newAnnoCount += changeLines.size();
+            }
+            if (changeLines.size() > 0) synchronized (this.changeWriter) {
+                for (var line : changeLines)
+                    this.changeWriter.println(line);
             }
         } catch (IOException e) {
             // Convert the IO exception to allow use in streams.
