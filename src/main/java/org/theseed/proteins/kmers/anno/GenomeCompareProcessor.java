@@ -66,6 +66,7 @@ public class GenomeCompareProcessor extends BaseCompareProcessor {
 
     @Override
     protected void setSubDefaults() {
+        this.type = CompareType.FUNCTIONS;
     }
 
     @Override
