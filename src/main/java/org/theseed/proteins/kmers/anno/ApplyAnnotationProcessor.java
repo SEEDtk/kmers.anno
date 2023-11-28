@@ -6,11 +6,8 @@ package org.theseed.proteins.kmers.anno;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -24,6 +21,7 @@ import org.theseed.genome.iterator.GenomeSource;
 import org.theseed.genome.iterator.GenomeTargetType;
 import org.theseed.genome.iterator.IGenomeTarget;
 import org.theseed.io.TabbedLineReader;
+import org.theseed.proteins.kmers.Annotation;
 
 /**
  * This sub-command applies annotation files to input genomes and writes the results to a new
@@ -56,8 +54,6 @@ public class ApplyAnnotationProcessor extends BaseProcessor {
     private IGenomeTarget genomesOut;
     /** map of genome IDs to annotation files */
     private Map<String, File> annoMap;
-    /** annotation file name pattern */
-    private static final Pattern ANNO_FILE_NAME = Pattern.compile("(\\d+\\.\\d+)\\.anno\\.tbl");
 
     // COMMAND-LINE OPTONS
 
@@ -94,27 +90,8 @@ public class ApplyAnnotationProcessor extends BaseProcessor {
 
     @Override
     protected boolean validateParms() throws IOException, ParseFailureException {
-        // Verify the annotations exist.
-        if (! this.annoDir.isDirectory())
-            throw new FileNotFoundException("Annotation directory " + this.annoDir + " is not found or invalid.");
-        File[] annoFiles = this.annoDir.listFiles();
-        // Build a map of the annotation files.
-        this.annoMap = new TreeMap<String, File>();
-        for (File file : annoFiles) {
-            if (file.isFile()) {
-                // Use the pattern to determine if this is an annotation file.
-                String baseName = file.getName();
-                Matcher m = ANNO_FILE_NAME.matcher(baseName);
-                if (m.matches()) {
-                    // Here we have one.
-                    if (! file.canRead())
-                        throw new IOException("Annotation file " + file + " is unreadable.");
-                    // Match group 1 is the genome ID.
-                    this.annoMap.put(m.group(1), file);
-                }
-            }
-        }
-        log.info("{} annotation files found in {}.", this.annoMap.size(), this.annoDir);
+        // Get the annotation map.
+        this.annoMap = Annotation.getAnnoMap(this.annoDir);
         // Now connect to the genome source.
         if (! this.inDir.exists())
             throw new FileNotFoundException("Input genome source " + this.inDir + " does not exist.");
@@ -149,14 +126,13 @@ public class ApplyAnnotationProcessor extends BaseProcessor {
             // Loop through the annotation file.
             final File annoFile = annoEntry.getValue();
             try (TabbedLineReader annoStream = new TabbedLineReader(annoFile)) {
-                int fidColIdx = annoStream.findField("fid");
-                int scoreColIdx = annoStream.findField("score");
-                int annoColIdx = annoStream.findField("new_annotation");
+                Iterator<Annotation> iter = new Annotation.Iter(annoStream);
                 log.info("Reading annotations from file {}.", annoFile);
-                for (var line : annoStream) {
-                    String fid = line.get(fidColIdx);
-                    double score = line.getDouble(scoreColIdx);
-                    String annotation = line.get(annoColIdx);
+                while (iter.hasNext()) {
+                    Annotation anno = iter.next();
+                    String fid = anno.getFid();
+                    double score = anno.getScore();
+                    String annotation = anno.getNewAnnotation();
                     fidCount++;
                     // Look for the feature in the genome.
                     Feature feat = genome.getFeature(fid);
