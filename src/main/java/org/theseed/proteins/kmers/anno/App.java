@@ -21,6 +21,7 @@ import org.theseed.genome.compare.GeneCopyProcessor;
  *  seqCheck	verify that proteins in genomes are consistently annotated
  *  genes		copy gene names from one genome to a close genome without gene names
  *  hashAnno	use a protein kmer hash to annotate features in a PATRIC dump directory
+ *  applyAnno	apply annotations produced by the hash annotator
  */
 public class App
 {
@@ -64,6 +65,9 @@ public class App
             break;
         case "hashAnno" :
             processor = new HashAnnotationProcessor();
+            break;
+        case "applyAnno" :
+            processor = new ApplyAnnotationProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command \"" + command + "\".");
