@@ -164,13 +164,16 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
     @Override
     protected void runMultiReports() throws Exception {
         // Set up the changes file.
-        try (PrintWriter writer = this.openReport("changes.tbl")) {
+        File changeFile = this.getOutFile("changes.tbl");
+        log.info("Writing change list to {}.", changeFile);
+        try (PrintWriter writer = new PrintWriter(changeFile)) {
             writer.println(OUTPUT_HEADER);
             // The subtasks need access to the changes writer.
             this.changeWriter = writer;
             // Now we loop through the genome directories.
             Set<String> genomeIds = this.genomes.getIDs();
             genomeIds.parallelStream().forEach(x -> this.processGenome(x));
+            writer.flush();
             log.info("{} total proteins out of {} features processed for {} genomes.", this.protCount, this.featCount, this.gCount);
             log.info("{} annotations confirmed, {} updated, {} defaulted.", this.confirmCount, this.newAnnoCount, this.defaultCount);
         }

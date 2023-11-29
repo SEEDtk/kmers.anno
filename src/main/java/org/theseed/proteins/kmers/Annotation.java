@@ -20,6 +20,8 @@ import org.theseed.io.TabbedLineReader;
 /**
  * This class is used to simplify reading annotation files.  The class itself represents an annotation record,
  * and an iterator is provided to run through the files.
+ *
+ * Two annotations are the same if the old and new strings match.  The score and feature ID do not count.
  */
 public class Annotation {
 
@@ -63,7 +65,7 @@ public class Annotation {
      * @return TRUE if the annotation has a zero score, else FALSE
      */
     public boolean isNull() {
-        return this.score == 0.0;
+        return Double.isNaN(this.score) || this.score == 0.0;
     }
 
     /**
@@ -175,6 +177,37 @@ public class Annotation {
         }
         log.info("{} annotation files found in {}.", retVal.size(), annoDir);
         return retVal;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((this.newAnnotation == null) ? 0 : this.newAnnotation.hashCode());
+        result = prime * result + ((this.oldAnnotation == null) ? 0 : this.oldAnnotation.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Annotation other = (Annotation) obj;
+        if (this.newAnnotation == null) {
+            if (other.newAnnotation != null)
+                return false;
+        } else if (!this.newAnnotation.equals(other.newAnnotation))
+            return false;
+        if (this.oldAnnotation == null) {
+            if (other.oldAnnotation != null)
+                return false;
+        } else if (!this.oldAnnotation.equals(other.oldAnnotation))
+            return false;
+        return true;
     }
 }
 
