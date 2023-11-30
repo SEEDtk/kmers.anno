@@ -62,6 +62,13 @@ public class Annotation {
     }
 
     /**
+     * @return TRUE if the new annotation string is hypothetical
+     */
+    public boolean isHypothetical() {
+        return StringUtils.equals(this.newAnnotation, "hypothetical protein");
+    }
+
+    /**
      * @return TRUE if the annotation has a zero score, else FALSE
      */
     public boolean isNull() {

@@ -27,8 +27,9 @@ import org.theseed.utils.BaseReportProcessor;
  * This program reads the "changes.tbl" file and memorizes confirmed re-annotations, that is, annotation mappings that
  * have very high scores.  For each output genome, we then split the annotation recommendations into those where the
  * new annotation has a score of zero, those where the new annotation is the same as the old one or is confirmed, and
- * those where the new annotation is unconfirmed.  We then produce statistics on the scores for the latter two groups
- * for each genome.  These will be displayed on the standard output.
+ * those where the new annotation is unconfirmed.  Annotations with a score of 0 are separated into those that are
+ * hypothetical and those that are not.  Finally, we produce statistics on the scores for the same/confirmed and
+ * unconfirmed on all genomes and for each genome.  These will be displayed on the standard output.
  *
  * The positional parameter is the name of the annotation directory.  The command-line options are as follows:
  *
@@ -53,8 +54,11 @@ public class CheckAnnotationProcessor extends BaseReportProcessor {
     private SummaryStatistics goodStats;
     /** statistics for questionable changes */
     private SummaryStatistics badStats;
-    /** count of null changes */
+    /** count of non-hypothetical null changes */
     private int keepCount;
+    /** count of hypothetical null changes */
+    private int hypoCount;
+    /** count of features processed */
     private int featCount;
 
     // COMMAND-LINE OPTIONS
@@ -106,10 +110,11 @@ public class CheckAnnotationProcessor extends BaseReportProcessor {
         // Initialize the global counters and stats.
         this.keepCount = 0;
         this.featCount = 0;
+        this.hypoCount = 0;
         this.goodStats = new SummaryStatistics();
         this.badStats = new SummaryStatistics();
         // Write the output header.
-        writer.println("genome\tfids\tdefaulted\tgood_count\tgood_mean\tgood_min\tgood_sdev\tother_count\tother_mean\tother_min\tother_sdev");
+        writer.println("genome\tfids\tdefaulted\thypo_defaulted\tgood_count\tgood_mean\tgood_min\tgood_sdev\tother_count\tother_mean\tother_min\tother_sdev");
         // Loop through the genomes, processing the annotation files.
         int gCount = 0;
         final int gTotal = this.annoMap.size();
@@ -123,6 +128,7 @@ public class CheckAnnotationProcessor extends BaseReportProcessor {
             SummaryStatistics bad = new SummaryStatistics();
             int keep = 0;
             int feat = 0;
+            int hypo = 0;
             // Now open and process the file.
             try (TabbedLineReader annoStream = new TabbedLineReader(annoFile)) {
                 Iterator<Annotation> iter = new Annotation.Iter(annoStream);
@@ -132,8 +138,13 @@ public class CheckAnnotationProcessor extends BaseReportProcessor {
                     Annotation anno = iter.next();
                     double score = anno.getScore();
                     if (anno.isNull()) {
-                        this.keepCount++;
-                        keep++;
+                        if (anno.isHypothetical()) {
+                            this.hypoCount++;
+                            hypo++;
+                        } else {
+                            this.keepCount++;
+                            keep++;
+                        }
                     } else if (anno.isGood() || this.confirmed.contains(anno)) {
                         good.addValue(score);
                         this.goodStats.addValue(score);
@@ -142,11 +153,11 @@ public class CheckAnnotationProcessor extends BaseReportProcessor {
                         this.badStats.addValue(score);
                     }
                 }
-                this.report(writer, genomeId, feat, keep, good, bad);
+                this.report(writer, genomeId, feat, keep, hypo, good, bad);
             }
         }
         // Write the totals.
-        this.report(writer, "TOTALS", this.featCount, this.keepCount, this.goodStats, this.badStats);
+        this.report(writer, "TOTALS", this.featCount, this.keepCount, this.hypoCount, this.goodStats, this.badStats);
         log.info("{} genomes processed.", gCount);
     }
 
@@ -156,13 +167,14 @@ public class CheckAnnotationProcessor extends BaseReportProcessor {
      * @param writer	output print writer
      * @param genomeId	ID of the genome
      * @param feat		number of features processed
-     * @param keep		number of default annotations
+     * @param keep		number of default non-hypothetical annotations
+     * @param hypo		number of default hypothetical annotations
      * @param good		summary statistics for known good annotations
      * @param bad		summary statistics for questionable annotations
      */
-    private void report(PrintWriter writer, String genomeId, int feat, int keep, SummaryStatistics good,
+    private void report(PrintWriter writer, String genomeId, int feat, int hypo, int keep, SummaryStatistics good,
             SummaryStatistics bad) {
-        writer.println(genomeId + "\t" + Integer.toString(feat) + "\t" + Integer.toString(keep)
+        writer.println(genomeId + "\t" + Integer.toString(feat) + "\t" + Integer.toString(keep) + "\t" + Integer.toString(hypo)
                 + "\t" + Long.toString(good.getN()) + "\t" + Double.toString(good.getMean())
                 + "\t" + Double.toString(good.getMin()) + "\t" + Double.toString(good.getStandardDeviation())
                 + "\t" + Long.toString(bad.getN()) + "\t" + Double.toString(bad.getMean())
