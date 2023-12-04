@@ -204,6 +204,8 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
                 fCount++;
                 if (StringUtils.isBlank(prot))
                     sCount++;
+                else if (StringUtils.contains(prot, '*'))
+                    sCount++;
                 else {
                     String fid = feat.getId();
                     String annotation = feat.getPegFunction();
