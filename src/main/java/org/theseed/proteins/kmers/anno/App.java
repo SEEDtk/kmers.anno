@@ -23,6 +23,7 @@ import org.theseed.genome.compare.GeneCopyProcessor;
  *  hashAnno	use a protein kmer hash to annotate features in a PATRIC dump directory
  *  applyAnno	apply annotations produced by the hash annotator
  *  checkAnno	examine hash-annotator results and write statistics
+ *  listAnno	list annotation changes between identical genomes
  */
 public class App
 {
@@ -72,6 +73,9 @@ public class App
             break;
         case "checkAnno" :
             processor = new CheckAnnotationProcessor();
+            break;
+        case "listAnno" :
+            processor = new ListNewAnnotationProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command \"" + command + "\".");
