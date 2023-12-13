@@ -7,17 +7,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.List;
-
 import org.slf4j.LoggerFactory;
 import org.theseed.basic.ParseFailureException;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
-import org.theseed.genome.SubsystemRow;
 import org.theseed.genome.iterator.GenomeSource;
 import org.theseed.genome.iterator.GenomeSource.Type;
+import org.theseed.reports.AnnotationReporter;
 import org.theseed.utils.BaseReportProcessor;
-import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
@@ -37,11 +34,12 @@ import org.slf4j.Logger;
  *
  * --oldType	type of genome source for the old annotations (default DIR)
  * --newType	type of genome source for the new annotations (default DIR)
+ * --format		output report type (default FULL)
  *
  * @author Bruce Parrello
  *
  */
-public class ListNewAnnotationProcessor extends BaseReportProcessor {
+public class ListNewAnnotationProcessor extends BaseReportProcessor implements AnnotationReporter.IParms {
 
     // FIELDS
     /** logging facility */
@@ -50,6 +48,8 @@ public class ListNewAnnotationProcessor extends BaseReportProcessor {
     private GenomeSource oldGenomes;
     /** new-annotation genome source */
     private GenomeSource newGenomes;
+    /** output report controller */
+    private AnnotationReporter reporter;
 
     // COMMAND-LINE OPTIONS
 
@@ -60,6 +60,10 @@ public class ListNewAnnotationProcessor extends BaseReportProcessor {
     /** new-annotation genome source type */
     @Option(name = "--newType", usage = "genome source type for new-annotation genomes")
     private GenomeSource.Type newType;
+
+    /** format of output report */
+    @Option(name = "--format", usage = "output report format")
+    private AnnotationReporter.Type outType;
 
     /** input file or directory for old-annotation genomes */
     @Argument(index = 0, metaVar = "oldDir", usage = "genome source for old-annotation genomes", required = true)
@@ -74,6 +78,7 @@ public class ListNewAnnotationProcessor extends BaseReportProcessor {
     protected void setReporterDefaults() {
         this.oldType = GenomeSource.Type.DIR;
         this.newType = GenomeSource.Type.DIR;
+        this.outType = AnnotationReporter.Type.FULL;
     }
 
     @Override
@@ -89,6 +94,8 @@ public class ListNewAnnotationProcessor extends BaseReportProcessor {
         this.newGenomes = this.connect(this.newDir, this.newType);
         if (this.oldGenomes.size() != this.newGenomes.size())
             log.warn("WARNING: Genome sources are different sizes!");
+        // Set up the reporter.
+        this.reporter = this.outType.create();
     }
 
     /**
@@ -111,13 +118,11 @@ public class ListNewAnnotationProcessor extends BaseReportProcessor {
     @Override
     protected void runReporter(PrintWriter writer) throws Exception {
         // Write out the header.
-        writer.println("fid\told_annotation\told_subsystem\told_subclass1\told_subclass2\told_subclass3"
-                +         "\tnew_annotation\tnew_subsystem\tnew_subclass1\tnew_subclass2\tnew_subclass3");
+        this.reporter.startReport(this, writer);
         // Loop through the genomes.
         int processed = 0;
         int gErrors = 0;
         int fErrors = 0;
-        int noSubs = 0;
         int fCount = 0;
         final int total = this.oldGenomes.size();
         for (Genome genome : this.oldGenomes) {
@@ -134,59 +139,16 @@ public class ListNewAnnotationProcessor extends BaseReportProcessor {
                     Feature newFeat = newGenome.getFeature(fid);
                     fCount++;
                     if (newFeat == null) {
-                        log.error("ERROR: Featuree {} not found in new version of {}.", fid, newGenome);
+                        log.error("ERROR: Feature {} not found in new version of {}.", fid, newGenome);
                         fErrors++;
-                    } else {
-                        String oldAnno = feat.getPegFunction();
-                        String newAnno = newFeat.getPegFunction();
-                        // Now we need to compare the subsystems.  We get a list of associated subsystems for each version.
-                        var oldSubs = feat.getSubsystemRows();
-                        var newSubs = newFeat.getSubsystemRows();
-                        if (oldSubs.isEmpty() && newSubs.isEmpty()) {
-                            // Here there are no subsystems.  Show the annotations only.
-                            writer.println(fid + "\t" + oldAnno + "\t\t\t\t\t" + newAnno + "\t\t\t\t");
-                            noSubs++;
-                        } else {
-                            var oldIter = oldSubs.iterator();
-                            var newIter = newSubs.iterator();
-                            // Process the subsystems in parallel.  (Generally there will be one each.
-                            while (oldIter.hasNext() && newIter.hasNext()) {
-                                String oldString;
-                                if (oldIter.hasNext()) {
-                                    SubsystemRow oldRow = oldIter.next();
-                                    oldString = this.subsysString(oldRow);
-                                } else
-                                    oldString = "\t\t\t";
-                                String newString;
-                                if (newIter.hasNext()) {
-                                    SubsystemRow newRow = newIter.next();
-                                    newString = this.subsysString(newRow);
-                                } else
-                                    newString = "\t\t\t";
-                                writer.println(fid + "\t" + oldAnno + "\t" + oldString + "\t" + newAnno + "\t" + newString);
-                            }
-                        }
-                    }
+                    } else
+                        this.reporter.processFeature(feat, newFeat);
                 }
             }
         }
-        log.info("{} features processed in {} genomes.  {} feature errors and {} genome errors. {} features had no subsystems.",
-                fCount, processed, fErrors, gErrors, noSubs);
-    }
-
-    /**
-     * @return the subsystem description string for a subsystem row
-     *
-     * @param row	subsystem row descriptor
-     */
-    private String subsysString(SubsystemRow row) {
-        List<String> classes = row.getClassifications();
-        while (classes.size() > 3)
-            classes.remove(classes.size() - 1);
-        while (classes.size() < 3)
-            classes.add("");
-        String retVal = row.getName() + "\t" + StringUtils.join(classes, '\t');
-        return retVal;
+        log.info("{} features processed in {} genomes.  {} feature errors and {} genome errors.",
+                fCount, processed, fErrors, gErrors);
+        this.reporter.finishReport();
     }
 
 }
