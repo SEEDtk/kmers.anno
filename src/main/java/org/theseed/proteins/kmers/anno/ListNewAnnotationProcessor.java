@@ -70,7 +70,7 @@ public class ListNewAnnotationProcessor extends BaseReportProcessor implements A
     private File oldDir;
 
     /** input file or directory for new-annotation genomes */
-    @Argument(index = 0, metaVar = "newDir", usage = "genome source for new-annotation genomes", required = true)
+    @Argument(index = 1, metaVar = "newDir", usage = "genome source for new-annotation genomes", required = true)
     private File newDir;
 
 

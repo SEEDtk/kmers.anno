@@ -24,6 +24,7 @@ import org.theseed.genome.compare.GeneCopyProcessor;
  *  applyAnno	apply annotations produced by the hash annotator
  *  checkAnno	examine hash-annotator results and write statistics
  *  listAnno	list annotation changes between identical genomes
+ *  updateJson	update annotations in JSON genome files
  */
 public class App
 {
@@ -76,6 +77,9 @@ public class App
             break;
         case "listAnno" :
             processor = new ListNewAnnotationProcessor();
+            break;
+        case "updateJson" :
+            processor = new UpdateJsonProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command \"" + command + "\".");

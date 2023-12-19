@@ -23,7 +23,7 @@ public class FullCompareAnnotationReporter extends AnnotationReporter {
      * Construct a new full-comparison reporter.
      */
     public FullCompareAnnotationReporter() {
-        fields = new Object[11];
+        this.fields = new Object[11];
     }
 
     @Override
@@ -49,24 +49,23 @@ public class FullCompareAnnotationReporter extends AnnotationReporter {
             var newIter = newSubs.iterator();
             while (oldIter.hasNext() && newIter.hasNext()) {
                 // Clear out the old data line.
-                Arrays.fill(fields, null);
+                Arrays.fill(this.fields, null);
                 // Start filling in the new data.
-                fields[0] = fid;
-                fields[1] = oldAnno;
+                this.fields[0] = fid;
+                this.fields[1] = oldAnno;
                 if (oldIter.hasNext()) {
                     SubsystemRow oldRow = oldIter.next();
-                    this.fillSubData(oldRow, fields, 2);
+                    fillSubData(oldRow, this.fields, 2);
                 }
-                fields[6] = newAnno;
+                this.fields[6] = newAnno;
                 if (newIter.hasNext()) {
                     SubsystemRow newRow = newIter.next();
-                    this.fillSubData(newRow, fields, 7);
+                    fillSubData(newRow, this.fields, 7);
                 }
                 // Write the line.
-                this.writeData(fields);
+                this.writeData(this.fields);
             }
         }
-
     }
 
     /**
@@ -76,7 +75,7 @@ public class FullCompareAnnotationReporter extends AnnotationReporter {
      * @param fields	output field buffer
      * @param i			position for subsystem name
      */
-    private void fillSubData(SubsystemRow subRow, Object[] fields, int i) {
+    protected static void fillSubData(SubsystemRow subRow, Object[] fields, int i) {
         fields[i] = subRow.getName();
         List<String> classes = subRow.getClassifications();
         int n = classes.size();
