@@ -12,6 +12,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.Argument;
@@ -31,8 +33,10 @@ import org.theseed.utils.BaseMultiReportProcessor;
  * This sub-command uses protein kmer hashing to annotate GTOs.  The GTOs should be at least
  * PROTEIN detail level:  DNA is not required.  For each GTO, a file named "XXXXXX.anno.tbl"
  * will be output, where "XXXXXX" is the genome ID. If no annotation is possible, the old annotation
- * is retained.  A file containing the annotations that have changed by the process will be
- * output to "changes.tbl" in the output directory.
+ * is retained.  A file containing the annotations that have been changed by the process will be
+ * output to "changes.tbl" in the output directory.  Note that this will only include changes in the
+ * current run.  If you are resuming from a previous run using the "--missing" option, the old
+ * changes will be overwritten.
  *
  * The annotation data is in a role annotation file.  This is a tab-delimited file with headers, and
  * the proteins are in a column named "protein" and the annotations in a column named "annotation".
@@ -52,6 +56,8 @@ import org.theseed.utils.BaseMultiReportProcessor;
  *
  * --minSim		minimum similarity score for an annotation to be acceptable (default 0.0125)
  * --minLen		minimum acceptable protein length (default 50)
+ * --clear		erase the output directory before processing
+ * --missing	only process genomes without an output file already present
  *
  */
 public class HashAnnotationProcessor extends BaseMultiReportProcessor {
@@ -63,6 +69,8 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
     private GenomeSource genomes;
     /** number of genomes processed */
     private int gCount;
+    /** number of genomes being processed */
+    private int gTotal;
     /** number of features processed */
     private int featCount;
     /** number of proteins analyzed */
@@ -79,6 +87,8 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
     private PrintWriter changeWriter;
     /** header line for output files */
     private static final String OUTPUT_HEADER = "fid\tscore\tnew_annotation\told_annotation";
+    /** name pattern for annotation files */
+    private static final Pattern ANNO_FILE_PATTERN = Pattern.compile("(\\d+\\.\\d+)\\.anno\\.tbl");
 
     // COMMAND-LINE OPTIONS
 
@@ -98,6 +108,10 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
     @Option(name = "--source", aliases = { "-t" }, usage = "type of genome source")
     private GenomeSource.Type sourceType;
 
+    /** only process new genomes */
+    @Option(name = "--missing", usage = "if specified, only new genomes will be annotated")
+    private boolean missingFlag;
+
     /** input role annotation file */
     @Argument(index = 0, metaVar = "annoFile", usage = "input role annotation file", required = true)
     private File annoFile;
@@ -112,6 +126,7 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
         this.minScore = 0.0125;
         this.sourceType = GenomeSource.Type.DIR;
         this.minProtLen = 50;
+        this.missingFlag = false;
     }
     @Override
     protected File setDefaultOutputDir(File curDir) {
@@ -163,6 +178,25 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
 
     @Override
     protected void runMultiReports() throws Exception {
+        // We want to loop through the genome directories.  Get all the genome IDs.
+        Set<String> genomeIds = this.genomes.getIDs();
+        // If we are resuming, delete the genomes already processed.
+        if (this.missingFlag) {
+            // Get the list of files present.
+            File[] annoFiles = this.getOutDir().listFiles();
+            for (File annoFile : annoFiles) {
+                String annoFileName = annoFile.getName();
+                Matcher m = ANNO_FILE_PATTERN.matcher(annoFileName);
+                if (m.matches()) {
+                    // Here we have an annotation file.  The genome ID is in the first match group.
+                    String genomeId = m.group(1);
+                    genomeIds.remove(genomeId);
+                }
+            }
+            log.info("{} genomes left to process.", genomeIds.size());
+        }
+        // Save the number of genomes to process.
+        this.gTotal = genomeIds.size();
         // Set up the changes file.
         File changeFile = this.getOutFile("changes.tbl");
         log.info("Writing change list to {}.", changeFile);
@@ -170,8 +204,7 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
             writer.println(OUTPUT_HEADER);
             // The subtasks need access to the changes writer.
             this.changeWriter = writer;
-            // Now we loop through the genome directories.
-            Set<String> genomeIds = this.genomes.getIDs();
+            // Now run the genomes in parallel.
             genomeIds.parallelStream().forEach(x -> this.processGenome(x));
             writer.flush();
             log.info("{} total proteins out of {} features processed for {} genomes.", this.protCount, this.featCount, this.gCount);
@@ -190,7 +223,7 @@ public class HashAnnotationProcessor extends BaseMultiReportProcessor {
         synchronized (this) {
             this.gCount++;
         }
-        log.info("Processing genome {} of {}:  {}.", this.gCount, genomes.size(), genome);
+        log.info("Processing genome {} of {}:  {}.", this.gCount, this.gTotal, genome);
         try (PrintWriter writer = this.openReport(genomeId + ".anno.tbl")) {
             long genomeStart = System.currentTimeMillis();
             // Loop through the genome features, filling the kmer hash.
