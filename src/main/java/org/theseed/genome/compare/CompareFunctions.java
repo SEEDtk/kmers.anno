@@ -11,10 +11,10 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.theseed.counters.CountMap;
-import org.theseed.counters.QualityCountMap;
 import org.theseed.genome.Feature;
 import org.theseed.proteins.Function;
 import org.theseed.proteins.FunctionMap;
+import org.theseed.stats.QualityCountMap;
 
 /**
  * This class tracks comparisons between functional annotations.  We expect most functions to map to themselves, but we
