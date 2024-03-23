@@ -241,6 +241,7 @@ public class UpdateJsonProcessor extends BaseProcessor {
             // Get the GTO.
             String genomeId = genomeDir.getName();
             Genome genome = this.genomes.getGenome(genomeId);
+            String genomeName = genome.getName();
             gCount++;
             log.info("Processing genome {} of {}: {}.", gCount, nGenomes, genome);
             // Create the output directory.
@@ -303,6 +304,8 @@ public class UpdateJsonProcessor extends BaseProcessor {
                                 subObject.put("role_name", this.computeRole(sub, function));
                                 subObject.put("active", sub.isActive() ? "active" : "inactive");
                                 subObject.put("subsystem_name", sub.getName());
+                                subObject.put("genome_id", genomeId);
+                                subObject.put("genome_name", genomeName);
                                 List<String> classes = sub.getClassifications();
                                 if (classes.size() >= 1)
                                     subObject.put("superclass", classes.get(0));
