@@ -24,6 +24,8 @@ import org.theseed.genome.iterator.GenomeSource;
 import org.theseed.io.FieldInputStream;
 import org.theseed.io.FieldInputStream.Record;
 import org.theseed.io.JsonListInputStream;
+import org.theseed.proteins.Role;
+import org.theseed.proteins.RoleMap;
 
 import com.github.cliftonlabs.json_simple.JsonArray;
 import com.github.cliftonlabs.json_simple.JsonObject;
@@ -46,6 +48,7 @@ import com.github.cliftonlabs.json_simple.JsonObject;
  * -h	display command-line usage
  * -v	display more frequent log messages
  * -t	type of input genome source (default DIR)
+ * -R	location of the role definition file (default "roles.in.subsystems" in the current directory)
  *
  * --clear	erase the output directory before processing
  */
@@ -60,6 +63,8 @@ public class UpdateJsonProcessor extends BaseProcessor {
     private File[] genomeDirs;
     /** list of genome_feature field names, in column order */
     private String[] featureCols;
+    /** role definition map */
+    private RoleMap roleMap;
     /** map of genome_feature field names to types */
     private static final Map<String, JsonType> FEATURE_FIELDS = Map.ofEntries(
                     Map.entry("patric_id", JsonType.STRING),
@@ -92,7 +97,6 @@ public class UpdateJsonProcessor extends BaseProcessor {
     private static final Pattern GENOME_PATTERN = Pattern.compile("\\d+\\.\\d+");
     /** file filter for subdirectories of the input JSON dump that are genome IDs */
     protected static final FileFilter JGENOME_DIR_FILTER = new FileFilter() {
-
         @Override
         public boolean accept(File pathname) {
             // Insure we are a directory.
@@ -103,7 +107,6 @@ public class UpdateJsonProcessor extends BaseProcessor {
             }
             return retVal;
         }
-
     };
 
     // COMMAND-LINE OPTIONS
@@ -115,6 +118,10 @@ public class UpdateJsonProcessor extends BaseProcessor {
     /** input genome source type */
     @Option(name = "--type", aliases = {"-t" }, usage = "input genome source type")
     private GenomeSource.Type sourceType;
+
+    /** role definition file */
+    @Option(name = "--roles", aliases = { "-R" }, metaVar = "roles.in.subsystems", usage = "role definition file")
+    private File roleFile;
 
     /** input JSON master directory */
     @Argument(index = 0, metaVar = "jsonInDir", usage = "JSON dump input master directory", required = true)
@@ -187,6 +194,7 @@ public class UpdateJsonProcessor extends BaseProcessor {
     protected void setDefaults() {
         this.clearFlag = false;
         this.sourceType = GenomeSource.Type.DIR;
+        this.roleFile = new File(System.getProperty("user.dir"), "roles.in.subsystems");
     }
 
     @Override
@@ -215,6 +223,11 @@ public class UpdateJsonProcessor extends BaseProcessor {
         if (badGenomes > 0)
             throw new ParseFailureException(Integer.toString(badGenomes) + " genomes from "
                     + this.jsonInDir + " not found in " + this.genomeInDir + ".");
+        // Verify the role definition file.
+        if (! this.roleFile.canRead())
+            throw new FileNotFoundException("Role definition file " + this.roleFile + " is not found or invalid.");
+        this.roleMap = RoleMap.load(this.roleFile);
+        log.info("{} role definitions loaded from {}.", this.roleMap.size(), this.roleFile);
         // Set up the output directory.
         if (! this.jsonOutDir.isDirectory()) {
             log.info("Creating output directory {}.", this.jsonOutDir);
@@ -349,7 +362,9 @@ public class UpdateJsonProcessor extends BaseProcessor {
     }
 
     /**
-     * Compute the role of a feature in a subsystem.
+     * Compute the role of a feature in a subsystem.  This is a little tricky because the projector
+     * uses synonym normalization, so we have to use it too.  This requires use of the role definition
+     * map.
      *
      * @param sub		subsystem row
      * @param product	function string for feature
@@ -358,14 +373,15 @@ public class UpdateJsonProcessor extends BaseProcessor {
      */
     private String computeRole(SubsystemRow sub, String function) {
         String retVal = null;
-        String[] roles = Feature.rolesOfFunction(function);
+        List<Role> roles = Feature.usefulRoles(roleMap, function);
         List<SubsystemRow.Role> subRoles = sub.getRoles();
-        for (int i = 0; i < roles.length && retVal == null; i++) {
-            final String name = roles[i];
-            boolean found = subRoles.stream().anyMatch(x -> x.getName().equals(name));
+        for (Role role : roles) {
+            boolean found = subRoles.stream().anyMatch(x -> role.matches(x.getName()));
             if (found)
-                retVal = name;
+                retVal = role.getName();
         }
+        if (retVal == null)
+            log.error("Function {} not compatible with subsystem {}.", function, sub.getName());
         return retVal;
     }
 
