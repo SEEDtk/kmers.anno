@@ -16,10 +16,10 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseReportProcessor;
 import org.theseed.basic.ParseFailureException;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.proteins.kmers.Annotation;
-import org.theseed.utils.BaseReportProcessor;
 
 /**
  * This sub-command analyzes the results of a hash-annotation run.  The hash-annotator produces an XXXXXX.X.anno.tbl file
