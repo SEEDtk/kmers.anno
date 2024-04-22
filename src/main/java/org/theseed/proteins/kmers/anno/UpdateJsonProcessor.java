@@ -92,7 +92,7 @@ public class UpdateJsonProcessor extends BaseProcessor {
                 );
     /** set of file names for straight copy */
     private static final Set<String> COPY_FILES = Set.of("genome.json", "protein_structure.json",
-            "sp_gene.json", "pathway.json", "ppi.json", "bioset_result.json");
+            "sp_gene.json", "pathway.json", "ppi.json", "bioset_result.json", "genome_amr.json");
     /** genome ID string pattern */
     private static final Pattern GENOME_PATTERN = Pattern.compile("\\d+\\.\\d+");
     /** file filter for subdirectories of the input JSON dump that are genome IDs */
