@@ -23,7 +23,7 @@ import org.theseed.genome.SubsystemRow;
 import org.theseed.genome.iterator.GenomeSource;
 import org.theseed.io.FieldInputStream;
 import org.theseed.io.FieldInputStream.Record;
-import org.theseed.io.JsonListInputStream;
+import org.theseed.json.JsonListInputStream;
 import org.theseed.proteins.Role;
 import org.theseed.proteins.RoleMap;
 
