@@ -25,6 +25,7 @@ import org.theseed.genome.compare.GeneCopyProcessor;
  *  checkAnno	examine hash-annotator results and write statistics
  *  listAnno	list annotation changes between identical genomes
  *  updateJson	update annotations in JSON genome files
+ *  buildGtos	build GTOs from PATRIC data and annotation update files
  */
 public class App
 {
@@ -80,6 +81,9 @@ public class App
             break;
         case "updateJson" :
             processor = new UpdateJsonProcessor();
+            break;
+        case "buildGtos" :
+            processor = new GtoBuildProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command \"" + command + "\".");
