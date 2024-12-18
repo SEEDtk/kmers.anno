@@ -6,6 +6,7 @@ package org.theseed.proteins.kmers.anno;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -107,8 +108,11 @@ public class GtoBuildProcessor extends BaseMultiReportProcessor {
         this.familyFile = new File(this.inDir, "local.family.members");
         if (! this.familyFile.canRead())
             throw new FileNotFoundException("Cannot find the family list file " + this.familyFile + " in the input directory.");
+        // Connect to PATRIC.
         log.info("Connecting to PATRIC.");
         this.p3 = new P3Connection();
+        // Create the genome map.
+        this.genomeMap = new HashMap<String, Genome>();
     }
 
     @Override
@@ -124,7 +128,7 @@ public class GtoBuildProcessor extends BaseMultiReportProcessor {
                 String genomeId = line.get(0);
                 String genomeName = line.get(1);
                 gCount++;
-                log.info("Reading genome #1 {}: {}", gCount, genomeId, genomeName);
+                log.info("Reading genome #{} {}: {}", gCount, genomeId, genomeName);
                 Genome genome = P3Genome.load(this.p3, genomeId, P3Genome.Details.FULL);
                 // Clean the genome. We need to erase the gene names, the protein families, and the annotated functions.
                 for (Feature feat : genome.getFeatures()) {
@@ -136,6 +140,8 @@ public class GtoBuildProcessor extends BaseMultiReportProcessor {
                         pCount++;
                     }
                 }
+                // Put the genome in the map.
+                this.genomeMap.put(genomeId, genome);
             }
             log.info("{} genomes read, {} proteins cleared.", gCount, pCount);
         }
@@ -155,7 +161,7 @@ public class GtoBuildProcessor extends BaseMultiReportProcessor {
                 if (feat == null)
                     errCount++;
                 else {
-                    String function = line.get(0);
+                    String function = line.get(1);
                     feat.setFunction(function);
                     aCount++;
                 }
