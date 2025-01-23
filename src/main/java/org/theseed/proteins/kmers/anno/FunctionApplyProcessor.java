@@ -21,7 +21,7 @@ import org.theseed.genome.GenomeDirectory;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.proteins.Function;
 import org.theseed.proteins.FunctionMap;
-import org.theseed.subsystems.SubsystemProjector;
+import org.theseed.subsystems.core.SubsystemRuleProjector;
 
 /**
  * This command reads in a function-mapping file produced by the "core.utils proteins" command and applies the good function mappings
@@ -49,7 +49,7 @@ public class FunctionApplyProcessor extends BaseProcessor {
     /** function conversion map (ID to description) */
     private Map<String, String> conversionMap;
     /** subsystem projector */
-    private SubsystemProjector projector;
+    private SubsystemRuleProjector projector;
 
     // COMMAND-LINE OPTIONS
 
@@ -88,7 +88,7 @@ public class FunctionApplyProcessor extends BaseProcessor {
         // Validate the projector file.
         if (this.projectorFile != null) {
             log.info("Loading subsystem projector from {}.", this.projectorFile);
-            this.projector = SubsystemProjector.load(this.projectorFile);
+            this.projector = SubsystemRuleProjector.load(this.projectorFile);
         }
         // Now set up the output directory.
         if (this.outDir.exists()) {
@@ -172,7 +172,7 @@ public class FunctionApplyProcessor extends BaseProcessor {
             fChangedTotal += fChanged;
             if (this.projector != null) {
                 log.info("Updating subsystems in {}.", genome);
-                this.projector.project(genome);
+                this.projector.project(genome, true);
             } else {
                 log.info("Deleting subsystems in {}.", genome);
                 genome.clearSubsystems();
