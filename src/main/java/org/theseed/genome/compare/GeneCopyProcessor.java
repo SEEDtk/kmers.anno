@@ -7,10 +7,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.stream.Collectors;
 
 import org.kohsuke.args4j.Argument;
@@ -53,8 +53,8 @@ public class GeneCopyProcessor extends BaseProcessor {
     private Genome target;
     /** map of function IDs to features */
     private Map<String, List<Feature>> funFeatures;
-    /** map of feature IDs to aliases */
-    private Map<String, Collection<String>> aliasMap;
+    /** map of feature IDs to aliase maps */
+    private Map<String, Map<String, NavigableSet<String>>> aliasMap;
 
     // COMMAND-LINE OPTIONS
 
@@ -104,7 +104,7 @@ public class GeneCopyProcessor extends BaseProcessor {
         // Create the maps.
         this.funMap = new FunctionMap();
         this.funFeatures = new HashMap<String, List<Feature>>(4000);
-        this.aliasMap = new HashMap<String, Collection<String>>(4000);
+        this.aliasMap = new HashMap<String, Map<String, NavigableSet<String>>>(4000);
         return true;
     }
 
@@ -113,7 +113,7 @@ public class GeneCopyProcessor extends BaseProcessor {
         // Loop through the source, collecting features by role.
         log.info("Processing features in {}.", this.source);
         for (Feature feat : this.source.getPegs()) {
-            Collection<String> aliases = feat.getAliases();
+            var aliases = feat.getAliasMap();
             if (aliases != null && aliases.size() > 0) {
                 // Associate the feature with its function.
                 String funDesc = feat.getPegFunction();
@@ -147,11 +147,15 @@ public class GeneCopyProcessor extends BaseProcessor {
                         }
                     }
                     if (found != null) {
-                        Collection<String> aliases = this.aliasMap.get(found.getId());
+                        var aliases = this.aliasMap.get(found.getId());
                         if (log.isDebugEnabled())
                             log.debug("Feature {} with function \"{}\" has aliases {}.", feat.getId(), feat.getPegFunction(),
-                                    aliases.stream().collect(Collectors.joining(", ")));
-                        aliases.stream().forEach(x -> feat.addAlias(x));
+                                    aliases.values().stream().flatMap(x -> x.stream()).collect(Collectors.joining(", ")));
+                        for (var aliasEntry : aliases.entrySet()) {
+                            String aliasType = aliasEntry.getKey();
+                            for (String alias : aliasEntry.getValue())
+                                feat.addAlias(aliasType, alias);
+                        }
                         updates++;
                     }
                 }
