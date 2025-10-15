@@ -65,7 +65,7 @@ public class SequenceCheckProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         if (! this.inDir.isDirectory())
             throw new FileNotFoundException("Input directory " + this.inDir + " is not found or invalid.");
         // Read the role map.
@@ -76,8 +76,7 @@ public class SequenceCheckProcessor extends BaseProcessor {
             this.roleMap = RoleMap.load(this.roleFile);
         }
         // Create the maps.
-        this.proteinMap = new HashMap<String, Set<Feature>>(2000000);
-        return true;
+        this.proteinMap = new HashMap<>(2000000);
     }
 
     @Override
@@ -107,7 +106,7 @@ public class SequenceCheckProcessor extends BaseProcessor {
         System.out.println("num\tfid\tfunction\tinteresting");
         // Now, for each sequence, we determine the most common function.
         FunctionMap funMap = new FunctionMap();
-        CountMap<String> funCounts = new CountMap<String>();
+        CountMap<String> funCounts = new CountMap<>();
         int protCount = 0;
         int badCount = 0;
         log.info("Producing report.");

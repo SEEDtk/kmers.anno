@@ -80,7 +80,7 @@ public class ApplyKmerProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         // Verify the input directory.
         if (! this.inDir.isDirectory())
             throw new FileNotFoundException("Input directory " + this.inDir + " not found or invalid.");
@@ -98,7 +98,7 @@ public class ApplyKmerProcessor extends BaseProcessor {
         this.reporter.initReport(this.goodRoleFile);
         // Load the kmer database.
         log.info("Loading kmer database from {}.", this.kmerDbFile);
-        this.kmerRoleMap = new HashMap<String, String>((int) (this.kmerDbFile.length() / 30));
+        this.kmerRoleMap = new HashMap<>((int) (this.kmerDbFile.length() / 30));
         try (TabbedLineReader kmerStream = new TabbedLineReader(this.kmerDbFile, 2)) {
             String kmer = "";
             for (TabbedLineReader.Line line : kmerStream) {
@@ -108,7 +108,6 @@ public class ApplyKmerProcessor extends BaseProcessor {
             KmerReference.setKmerSize(kmer.length());
             log.info("Kmer size is {}.", KmerReference.getKmerSize());
         }
-        return true;
     }
 
     @Override

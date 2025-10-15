@@ -79,7 +79,7 @@ public class FunctionApplyProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         // Validate the input directory.
         if (! this.inDir.isDirectory())
             throw new FileNotFoundException("Input directory " + this.inDir + " is not found or invalid.");
@@ -104,7 +104,6 @@ public class FunctionApplyProcessor extends BaseProcessor {
             log.info("Creating output directory {}.", this.outDir);
             FileUtils.forceMkdir(this.outDir);
         }
-        return true;
     }
 
     /**
@@ -117,7 +116,7 @@ public class FunctionApplyProcessor extends BaseProcessor {
     private void readConversionFile(File conversionFileIn) throws IOException {
         // Create the maps.
         this.funMap = new FunctionMap();
-        this.conversionMap = new HashMap<String, String>(50000);
+        this.conversionMap = new HashMap<>(50000);
         // Read through the input file.
         try (TabbedLineReader conversionStream = new TabbedLineReader(conversionFileIn)) {
             int oldFunIdx = conversionStream.findField("patric_function");

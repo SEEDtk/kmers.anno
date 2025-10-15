@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 
 import org.kohsuke.args4j.Argument;
-import org.theseed.basic.ICommand;
 import org.theseed.genome.Genome;
 import org.theseed.io.TabbedLineReader;
 
@@ -34,7 +33,7 @@ import org.theseed.io.TabbedLineReader;
  * @author Bruce Parrello
  *
  */
-public class BatchKmerProcessor extends KmerProcessor implements ICommand {
+public class BatchKmerProcessor extends KmerProcessor {
 
     // COMMAND-LINE OPTIONS
 

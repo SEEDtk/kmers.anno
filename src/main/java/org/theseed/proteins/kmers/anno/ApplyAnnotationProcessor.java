@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -89,7 +90,7 @@ public class ApplyAnnotationProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         // Get the annotation map.
         this.annoMap = Annotation.getAnnoMap(this.annoDir);
         // Now connect to the genome source.
@@ -101,7 +102,6 @@ public class ApplyAnnotationProcessor extends BaseProcessor {
         // Finally, connect to the genome target.
         log.info("Preparing {} genome target {}.", this.targetType, this.outDir);
         this.genomesOut = this.targetType.create(this.outDir, this.clearFlag);
-        return true;
     }
 
     @Override

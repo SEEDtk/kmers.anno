@@ -4,8 +4,8 @@
 package org.theseed.proteins.kmers.anno;
 
 import java.io.File;
+
 import org.kohsuke.args4j.Option;
-import org.theseed.basic.ICommand;
 import org.theseed.genome.Genome;
 
 /**
@@ -34,7 +34,7 @@ import org.theseed.genome.Genome;
  * @author Bruce Parrello
  *
  */
-public class GenomeKmerProcessor extends KmerProcessor implements ICommand {
+public class GenomeKmerProcessor extends KmerProcessor {
 
     // COMMAND LINE
 
@@ -53,6 +53,7 @@ public class GenomeKmerProcessor extends KmerProcessor implements ICommand {
         this.help = false;
     }
 
+    @Override
     public void runCommand() throws Exception {
         log.info("Connecting to PATRIC.");
         Genome newGenome;

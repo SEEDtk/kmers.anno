@@ -52,7 +52,7 @@ public abstract class BaseCompareProcessor extends BaseProcessor {
     protected abstract void setSubDefaults();
 
     @Override
-    protected final boolean validateParms() throws IOException {
+    protected final void validateParms() throws IOException {
         if (! this.oldDir.isDirectory())
             throw new FileNotFoundException("Reference genome directory " + this.oldDir + " is not found or invalid.");
         try {
@@ -66,7 +66,6 @@ public abstract class BaseCompareProcessor extends BaseProcessor {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
-        return true;
     }
 
     /**

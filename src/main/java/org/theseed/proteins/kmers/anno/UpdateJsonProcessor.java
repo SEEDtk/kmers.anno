@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.Argument;
@@ -96,17 +97,14 @@ public class UpdateJsonProcessor extends BaseProcessor {
     /** genome ID string pattern */
     private static final Pattern GENOME_PATTERN = Pattern.compile("\\d+\\.\\d+");
     /** file filter for subdirectories of the input JSON dump that are genome IDs */
-    protected static final FileFilter JGENOME_DIR_FILTER = new FileFilter() {
-        @Override
-        public boolean accept(File pathname) {
-            // Insure we are a directory.
-            boolean retVal = pathname.isDirectory();
-            if (retVal) {
-                String dirName = pathname.getName();
-                retVal = GENOME_PATTERN.matcher(dirName).matches();
-            }
-            return retVal;
+    protected static final FileFilter JGENOME_DIR_FILTER = (File pathname) -> {
+        // Insure we are a directory.
+        boolean retVal = pathname.isDirectory();
+        if (retVal) {
+            String dirName = pathname.getName();
+            retVal = GENOME_PATTERN.matcher(dirName).matches();
         }
+        return retVal;
     };
 
     // COMMAND-LINE OPTIONS
@@ -198,7 +196,7 @@ public class UpdateJsonProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         // Insure the input directory is valid.
         if (! this.jsonInDir.isDirectory())
             throw new FileNotFoundException("Input JSON directory " + this.jsonInDir
@@ -237,7 +235,6 @@ public class UpdateJsonProcessor extends BaseProcessor {
             FileUtils.cleanDirectory(this.jsonOutDir);
         } else
             log.info("Output wll be to {},", this.jsonOutDir);
-        return true;
     }
 
     @Override

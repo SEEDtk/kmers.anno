@@ -86,7 +86,7 @@ public class GeneCopyProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         // Validate the distance.
         if (this.maxDist < 0.0 || this.maxDist > 1.0)
             throw new ParseFailureException("Distance must be between 0 and 1.");
@@ -103,9 +103,8 @@ public class GeneCopyProcessor extends BaseProcessor {
         this.target = new Genome(this.targetFile);
         // Create the maps.
         this.funMap = new FunctionMap();
-        this.funFeatures = new HashMap<String, List<Feature>>(4000);
-        this.aliasMap = new HashMap<String, Map<String, NavigableSet<String>>>(4000);
-        return true;
+        this.funFeatures = new HashMap<>(4000);
+        this.aliasMap = new HashMap<>(4000);
     }
 
     @Override
@@ -114,7 +113,7 @@ public class GeneCopyProcessor extends BaseProcessor {
         log.info("Processing features in {}.", this.source);
         for (Feature feat : this.source.getPegs()) {
             var aliases = feat.getAliasMap();
-            if (aliases != null && aliases.size() > 0) {
+            if (aliases != null && ! aliases.isEmpty()) {
                 // Associate the feature with its function.
                 String funDesc = feat.getPegFunction();
                 Function fun = this.funMap.findOrInsert(funDesc);

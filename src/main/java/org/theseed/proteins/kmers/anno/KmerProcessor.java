@@ -24,7 +24,7 @@ import org.theseed.locations.Location;
 import org.theseed.locations.PegProposal;
 import org.theseed.locations.PegProposalList;
 import org.theseed.locations.SortedLocationList;
-import org.theseed.p3api.P3Connection;
+import org.theseed.p3api.P3CursorConnection;
 import org.theseed.p3api.P3Genome;
 import org.theseed.p3api.P3Genome.Details;
 import org.theseed.proteins.DnaTranslator;
@@ -46,7 +46,7 @@ public abstract class KmerProcessor extends BaseProcessor {
     protected static Logger log = LoggerFactory.getLogger(GenomeKmerProcessor.class);
 
     /** connection to PATRIC */
-    private P3Connection p3;
+    private P3CursorConnection p3;
     /** list of locations for each feature, separated vby frame */
     private FramedLocationLists framer;
     /** number of pegs created */
@@ -62,30 +62,37 @@ public abstract class KmerProcessor extends BaseProcessor {
     @Option(name = "-m", aliases = { "--minStrength", "--min" }, metaVar = "0.30",
             usage = "minimum acceptable proposal strength (0 to 1)")
     private double minStrength;
+
     /** maximum length factor */
     @Option(name = "-f", aliases = { "--fuzz", "--maxLength",
             "--max" }, metaVar = "2.0", usage = "maximum length increase factor for proteins (>= 1)")
     private double maxFuzz;
+
     /** minimum length factor */
     @Option(name = "--minLength", aliases = { "--minFuzz" }, metaVar = "0.5",
             usage = "maximum length decrease factor for proteins (<= 1")
     private double minFuzz;
+
     /** contig kmer algorithm */
     @Option(name = "--algorithm", usage = "algorithm for retrieving contig kmers")
     private KmerFactory.Type kmerType;
+
     /** minimum evidence */
     @Option(name = "-e", aliases = { "--minEvidence" }, metaVar = "2",
             usage = "minimum acceptable proposal kmers")
     private int minEvidence;
+
     /** kmer length */
     @Option(name = "-K", aliases = { "--kmer" }, metaVar = "10", usage = "protein kmer length (default 8)")
-    private void setKmers(int newSize) {
+    protected void setKmers(int newSize) {
         KmerReference.setKmerSize(newSize);
     }
+
     /** number of close genomes to use */
     @Option(name = "-n", aliases = { "--nGenomes",
             "--num" }, metaVar = "2", usage = "maximum number of close genomes to scan")
     private int maxGenomes;
+
     /** directory to use as a cache for genomes */
     @Option(name = "--cache", usage = "directory for saving PATRIC genomes for re-use")
     private File cache;
@@ -104,7 +111,8 @@ public abstract class KmerProcessor extends BaseProcessor {
      * @throws IOException
      * @throws ParseFailureException
      */
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    @Override
+    protected void validateParms() throws IOException, ParseFailureException {
         // Verify the options.
         if (this.minStrength >= 1.0)
             throw new ParseFailureException("Minimum strength must be less than 1.");
@@ -118,9 +126,8 @@ public abstract class KmerProcessor extends BaseProcessor {
         this.kmerFactory = KmerFactory.create(kmerType);
         // Connect to PATRIC.
         log.info("Connecting to PATRIC.");
-        this.p3 = new P3Connection();
+        this.p3 = new P3CursorConnection();
         validateCommandParms();
-        return true;
     }
 
     /**
@@ -133,6 +140,7 @@ public abstract class KmerProcessor extends BaseProcessor {
     /**
      * Set the default command-line options.
      */
+    @Override
     protected void setDefaults() {
         this.minStrength = 0.50;
         this.maxFuzz = 1.5;

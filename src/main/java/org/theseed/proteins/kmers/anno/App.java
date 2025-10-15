@@ -56,68 +56,30 @@ public class App
         BaseProcessor processor;
         // Parse the parameters.
         switch (command) {
-        case "kmers" :
-            processor = new GenomeKmerProcessor();
-            break;
-        case "batch" :
-            processor = new BatchKmerProcessor();
-            break;
-        case "build" :
-            processor = new BuildKmerProcessor();
-            break;
-        case "apply" :
-            processor = new ApplyKmerProcessor();
-            break;
-        case "merge" :
-            processor = new MergeFilesProcessor();
-            break;
-        case "funMap" :
-            processor = new FunctionCompareProcessor();
-            break;
-        case "funApply" :
-            processor = new FunctionApplyProcessor();
-            break;
-        case "compare" :
-            processor = new GenomeCompareProcessor();
-            break;
-        case "seqCheck" :
-            processor = new SequenceCheckProcessor();
-            break;
-        case "genes" :
-            processor = new GeneCopyProcessor();
-            break;
-        case "hashAnno" :
-            processor = new HashAnnotationProcessor();
-            break;
-        case "applyAnno" :
-            processor = new ApplyAnnotationProcessor();
-            break;
-        case "checkAnno" :
-            processor = new CheckAnnotationProcessor();
-            break;
-        case "listAnno" :
-            processor = new ListNewAnnotationProcessor();
-            break;
-        case "updateJson" :
-            processor = new UpdateJsonProcessor();
-            break;
-        case "buildGtos" :
-            processor = new GtoBuildProcessor();
-            break;
-        case "-h" :
-        case "--help" :
-            processor = null;
-            break;
-        default :
-            throw new RuntimeException("Invalid command " + command + ".");
+        case "kmers" -> processor = new GenomeKmerProcessor();
+        case "batch" -> processor = new BatchKmerProcessor();
+        case "build" -> processor = new BuildKmerProcessor();
+        case "apply" -> processor = new ApplyKmerProcessor();
+        case "merge" -> processor = new MergeFilesProcessor();
+        case "funMap" -> processor = new FunctionCompareProcessor();
+        case "funApply" -> processor = new FunctionApplyProcessor();
+        case "compare" -> processor = new GenomeCompareProcessor();
+        case "seqCheck" -> processor = new SequenceCheckProcessor();
+        case "genes" -> processor = new GeneCopyProcessor();
+        case "hashAnno" -> processor = new HashAnnotationProcessor();
+        case "applyAnno" -> processor = new ApplyAnnotationProcessor();
+        case "checkAnno" -> processor = new CheckAnnotationProcessor();
+        case "listAnno" -> processor = new ListNewAnnotationProcessor();
+        case "updateJson" -> processor = new UpdateJsonProcessor();
+        case "buildGtos" -> processor = new GtoBuildProcessor();
+        case "-h", "--help" -> processor = null;
+        default -> throw new RuntimeException("Invalid command " + command + ".");
         }
         if (processor == null)
             BaseProcessor.showCommands(COMMANDS);
         else {
-            boolean ok = processor.parseCommand(newArgs);
-            if (ok) {
-                processor.run();
-            }
+            processor.parseCommand(newArgs);
+            processor.run();
         }
     }
 }

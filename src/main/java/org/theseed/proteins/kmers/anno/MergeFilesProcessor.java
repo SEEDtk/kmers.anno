@@ -63,7 +63,7 @@ public class MergeFilesProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         // Verify the evaluation directory.
         if (! this.evalDir.isDirectory())
             throw new FileNotFoundException("Evaluation directory " + this.evalDir + " not found or invalid");
@@ -86,14 +86,13 @@ public class MergeFilesProcessor extends BaseProcessor {
         // Backup the ones we're modifying.
         FileUtils.copyFileToDirectory(this.rolesFile, backupDir);
         FileUtils.copyFileToDirectory(this.trainingFile, backupDir);
-        return true;
     }
 
     @Override
     protected void runCommand() throws Exception {
         // First, we get the training records.
         log.info("Processing training file {}.", this.trainingFile);
-        List<String[]> trainLines = new ArrayList<String[]>(1000);
+        List<String[]> trainLines = new ArrayList<>(1000);
         try (LineReader trainingStream = new LineReader(this.trainingFile)) {
             for (String line : trainingStream)
                 trainLines.add(StringUtils.split(line, '\t'));
@@ -101,7 +100,7 @@ public class MergeFilesProcessor extends BaseProcessor {
         this.keepFlags = new boolean[trainLines.get(0).length];
         log.info("{} records and {} columns in training set.", trainLines.size(), keepFlags.length);
         // Now process the testing records.
-        List<String[]> testLines = new ArrayList<String[]>(200);
+        List<String[]> testLines = new ArrayList<>(200);
         try (LineReader testingStream = new LineReader(this.testingFile)) {
             for (String line : testingStream) {
                 String[] fields = StringUtils.split(line, '\t');

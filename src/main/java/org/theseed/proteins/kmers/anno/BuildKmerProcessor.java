@@ -57,6 +57,8 @@ import org.theseed.sequence.Sequence;
 public class BuildKmerProcessor extends BaseProcessor {
 
     // FIELDS
+    /** logging facility */
+    protected static org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BuildKmerProcessor.class);
     /** map of kmers to role counts */
     private Map<String, RoleCounter> kmerMap;
     /** temporary file for protein FASTA */
@@ -80,7 +82,7 @@ public class BuildKmerProcessor extends BaseProcessor {
 
     /** kmer length */
     @Option(name = "-K", aliases = { "--kmer" }, metaVar = "10", usage = "protein kmer length (default 9)")
-    private void setKmers(int newSize) {
+    protected void setKmers(int newSize) {
         KmerReference.setKmerSize(newSize);
     }
 
@@ -105,7 +107,7 @@ public class BuildKmerProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         // Verify the good-genome list.
         if (this.genomeFile == null)
             log.info("No genome filtering.");
@@ -129,14 +131,13 @@ public class BuildKmerProcessor extends BaseProcessor {
         this.fastaBufferFile.deleteOnExit();
         // Verify the genome directory.
         if (! this.gtoDir.isDirectory())
-            throw new FileNotFoundException("Genome directory " + this.gtoDir + " not found or invalid.");
-        return true;
+            throw new FileNotFoundException("Genome directory " + this.gtoDir + " not found or invalid.");    
     }
 
     @Override
     protected void runCommand() throws Exception {
         // Create the kmer map.
-        this.kmerMap = new HashMap<String, RoleCounter>(this.goodRoles.size() * 700000);
+        this.kmerMap = new HashMap<>(this.goodRoles.size() * 700000);
         // We use this to count the number of buffered proteins.
         int bufferedCount = 0;
         // Open the fasta buffer file for output.
@@ -155,7 +156,7 @@ public class BuildKmerProcessor extends BaseProcessor {
                     // artifact of this pipeline's special purpose.
                     for (Feature peg : genome.getPegs()) {
                         List<Role> pegRoles = peg.getUsefulRoles(this.roleMap).stream().filter(x -> this.goodRoles.contains(x.getId())).collect(Collectors.toList());
-                        if (pegRoles.size() == 0) {
+                        if (pegRoles.isEmpty()) {
                             Sequence pegSequence = new Sequence(peg.getId(), "",
                                     peg.getProteinTranslation());
                             fastaBuffer.write(pegSequence);
@@ -207,7 +208,7 @@ public class BuildKmerProcessor extends BaseProcessor {
         }
         log.info("{} discriminating kmers remaining.", this.kmerMap.size());
         // This will count the kmers found for each role.
-        CountMap<String> kmerCounts = new CountMap<String>();
+        CountMap<String> kmerCounts = new CountMap<>();
         for (Map.Entry<String, RoleCounter> entry : this.kmerMap.entrySet()) {
             String roleId = entry.getValue().getRoleId();
             kmerCounts.count(roleId);
