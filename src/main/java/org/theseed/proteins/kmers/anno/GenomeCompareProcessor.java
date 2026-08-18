@@ -15,8 +15,6 @@ import java.util.stream.Collectors;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.theseed.genome.Genome;
 import org.theseed.genome.GenomeDirectory;
 import org.theseed.genome.compare.CompareType;
@@ -43,8 +41,6 @@ import org.theseed.genome.compare.MatchGenomes;
 public class GenomeCompareProcessor extends BaseCompareProcessor {
 
     // FIELDS
-    /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(GenomeCompareProcessor.class);
     /** comparison engine */
     private IGenomeMatcher compareEngine;
     /** map of old-genome IDs to quality percentages, corresponding to the input directory positions */
@@ -84,7 +80,7 @@ public class GenomeCompareProcessor extends BaseCompareProcessor {
                 throw new FileNotFoundException("New-genome directory " + newDir + " is not found or invalid.");
         }
         // Create the genome-matching map.
-        this.genomeMatchMap = new TreeMap<String, String[]>();
+        this.genomeMatchMap = new TreeMap<>();
         // Initialize the totals.
         this.good = new int[this.newDirs.size()];
         this.bad = new int[this.newDirs.size()];
@@ -112,8 +108,13 @@ public class GenomeCompareProcessor extends BaseCompareProcessor {
                     if (! ok)
                         log.error("Contig IDs in {} are invalid.  Comparison aborted.", genome);
                     else {
-                        // Here we have a result.
-                        String[] resultArray = this.genomeMatchMap.computeIfAbsent(oldGenome.getId(), x -> new String[this.newDirs.size()]);
+                        // Here we have a result.  The result array must be retrieved from the map before writing to it
+                        // so the compiler does not think it is only ever written.
+                        String[] resultArray = this.genomeMatchMap.get(oldGenome.getId());
+                        if (resultArray == null) {
+                            resultArray = new String[this.newDirs.size()];
+                            this.genomeMatchMap.put(oldGenome.getId(), resultArray);
+                        }
                         resultArray[iDir] = String.format("%8.4f", this.compareEngine.percent());
                         this.good[iDir] += this.compareEngine.getGood();
                         this.bad[iDir] += this.compareEngine.getBad();
@@ -134,9 +135,8 @@ public class GenomeCompareProcessor extends BaseCompareProcessor {
         System.out.println();
         String[] percents = new String[this.newDirs.size()];
         for (int i = 0; i < percents.length; i++) {
-            double pct = 0.0;
             if (this.good[i] > 0) {
-                pct = this.good[i] * 100.0 / (this.bad[i] + this.good[i]);
+                double pct = this.good[i] * 100.0 / (this.bad[i] + this.good[i]);
                 percents[i] = String.format("%8.4f", pct);
             }
         }
