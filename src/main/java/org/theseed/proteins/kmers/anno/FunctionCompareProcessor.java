@@ -60,6 +60,7 @@ public class FunctionCompareProcessor extends BaseCompareProcessor {
      *
      * @throws NoSuchAlgorithmException
      */
+    @Override
     protected void validateSubParms() throws IOException, NoSuchAlgorithmException {
         // Load the role map if needed.
         if (this.rolesNeededFile != null)
@@ -119,7 +120,7 @@ public class FunctionCompareProcessor extends BaseCompareProcessor {
                 System.out.format("%s\t%s\t%d\t%8.2f", oldName, newName, matches, matches * 100 / totalCount);
                 if (this.roleMap != null) {
                     List<Role> roles = Feature.usefulRoles(this.roleMap, newName);
-                    String flag = (roles.size() > 0 ? "\tY" : "\t");
+                    String flag = (! roles.isEmpty() ? "\tY" : "\t");
                     System.out.print(flag);
                 }
                 System.out.println();
