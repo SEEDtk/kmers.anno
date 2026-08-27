@@ -94,7 +94,7 @@ public class SequenceCheckProcessor extends BaseProcessor {
             for (Feature feat : genome.getPegs()) {
                 String seq = feat.getProteinTranslation();
                 if (seq != null && ! seq.isEmpty()) {
-                    Set<Feature> fSet = this.proteinMap.computeIfAbsent(md5engine.sequenceMD5(seq), x -> new HashSet<Feature>(10));
+                    Set<Feature> fSet = this.proteinMap.computeIfAbsent(md5engine.proteinMD5(seq), x -> new HashSet<Feature>(10));
                     fSet.add(feat);
                     fCount++;
                 }

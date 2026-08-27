@@ -86,7 +86,7 @@ public abstract class BaseCompareProcessor extends BaseProcessor {
      * @throws UnsupportedEncodingException
      */
     protected File findOldGenome(Genome genome) throws UnsupportedEncodingException {
-        String genomeMD5 = this.md5Computer.sequenceMD5(genome);
+        String genomeMD5 = this.md5Computer.contigMD5(genome);
         File oldGenomeFile = this.md5GenomeMap.get(genomeMD5);
         return oldGenomeFile;
     }
